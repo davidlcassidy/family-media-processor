@@ -1,0 +1,111 @@
+# ISO 3166-1 alpha-2
+# https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2#Officially_assigned_code_elements
+#
+# Cordinates: latitude, longitude (same order as Google Maps)
+
+United States - US:
+  California:
+    San Francisco:
+      Golden Gate Bridge: "37.82011,-122.47863"
+      Alcatraz Island: "37.8267,-122.4233"
+      Fisherman's Wharf: "37.8080,-122.4177"
+  New York:
+    New York City:
+      Statue of Liberty: "40.69017, -74.04533"
+      Times Square: "40.75803, -73.98550"
+      Central Park: "40.785091,-73.968285"
+      Empire State Building: "40.748817,-73.985428"
+    Niagara Falls:
+      Niagara Falls: "43.079944,-79.074416"
+  Washington:
+    Seattle:
+      Space Needle: "47.6205,-122.3493"
+      Pike Place Market: "47.6097,-122.3422"
+
+Canada - CA:
+  Ontario:
+    Toronto:
+      CN Tower: "43.64269, -79.38701"
+      Royal Ontario Museum: "43.66781, -79.39475"
+      Toronto Islands: "43.6111,-79.3769"
+      Ripley's Aquarium: "43.6415,-79.3865"
+  British Columbia:
+    Vancouver:
+      Stanley Park: "49.3045,-123.1446"
+      Granville Island: "49.2719,-123.1349"
+      Capilano Suspension Bridge: "49.3382,-123.1149"
+  Quebec:
+    Montreal:
+      Mount Royal: "45.4972,-73.5797"
+
+Germany - DE:
+  Bavaria:
+    Munich:
+      Marienplatz: "48.13755, 11.57542"
+      Nymphenburg Palace: "48.1584, 11.503335"
+      English Garden: "48.1575,11.5952"
+      BMW Museum: "48.1807,11.5584"
+  Berlin:
+    Berlin:
+      Brandenburg Gate: "52.51639, 13.37771"
+      Berlin Wall Memorial: "52.5352,13.3906"
+      Museum Island: "52.5186,13.3983"
+      Alexanderplatz: "52.5219,13.4132"
+
+Brazil - BR:
+  Rio de Janeiro:
+    Rio de Janeiro:
+      Christ the Redeemer: "-22.95176, -43.21044"
+      Sugarloaf Mountain: "-22.948674, -43.156167"
+      Copacabana Beach: "-22.9714,-43.1822"
+      Ipanema Beach: "-22.9857,-43.1971"
+  So Paulo:
+    So Paulo:
+      So Paulo Museum of Art: "-23.5615,-46.6559"
+
+France - FR:
+  Ile-de-France:
+    Paris:
+      Eiffel Tower: "48.8588443, 2.2943506"
+      Louvre Museum: "48.8606111, 2.337644"
+      Notre-Dame Cathedral: "48.852968, 2.349902"
+
+Italy - IT:
+  Lazio:
+    Rome:
+      Colosseum: "41.8902, 12.4922"
+      Vatican City: "41.9029, 12.4534"
+      Trevi Fountain: "41.9009, 12.4833"
+      Pantheon: "41.8986, 12.4769"
+  Tuscany:
+    Florence:
+      Florence Cathedral: "43.7731, 11.2550"
+
+Japan - JP:
+  Tokyo:
+    Tokyo:
+      Tokyo Tower: "35.6586, 139.7454"
+      Meiji Shrine: "35.6764, 139.6993"
+      Asakusa Temple: "35.7148, 139.7967"
+
+Australia - AU:
+  New South Wales:
+    Sydney:
+      Sydney Opera House: "-33.8568, 151.2153"
+      Sydney Harbour Bridge: "-33.8486, 151.2096"
+      Bondi Beach: "-33.8908, 151.2743"
+  Queensland:
+    Brisbane:
+      South Bank Parklands: "-27.4753, 153.0140"
+      Kangaroo Point Cliffs: "-27.4657, 153.0351"
+
+United Kingdom - GB:
+  England:
+    London:
+      Big Ben: "51.5007, -0.1246"
+      Tower of London: "51.5081, -0.0759"
+      Buckingham Palace: "51.5014, -0.1419"
+      The British Museum: "51.5194, -0.1270"
+  Scotland:
+    Edinburgh:
+      Edinburgh Castle: "56.4907, -3.2028"

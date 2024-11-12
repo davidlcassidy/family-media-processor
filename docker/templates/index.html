@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{ app_name }}</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js"></script>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: "Arial", sans-serif;
+                background-color: #f4f4f4;
+                margin: 0;
+                padding: 20px;
+            }
+
+            h1 {
+                text-align: center;
+                color: #333;
+            }
+
+            .container {
+                display: flex;
+                justify-content: space-between;
+                max-width: 1000px;
+                margin: 0 auto;
+                flex-wrap: wrap;
+            }
+
+            form {
+                width: 100%;
+            }
+
+            .left-section,
+            .right-section {
+                background: #fff;
+                border-radius: 8px;
+                padding: 20px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                flex-basis: 48%;
+                max-width: 48%;
+                flex-grow: 1;
+            }
+
+            .left-section {
+                margin-left: 0;
+            }
+
+            .right-section {
+                margin-left: auto;
+            }
+
+            label {
+                display: block;
+                margin-bottom: 10px;
+                font-size: 16px;
+                color: #555;
+            }
+
+            input[type="checkbox"] {
+                margin-right: 10px;
+            }
+
+            button {
+                background-color: #28a745;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 10px 15px;
+                cursor: pointer;
+                font-size: 16px;
+                margin-top: 20px;
+                width: 100%;
+            }
+
+            button:hover {
+                background-color: #218838;
+            }
+
+            button:disabled {
+                background-color: #cccccc;
+                cursor: not-allowed;
+            }
+
+            h2 {
+                text-align: center;
+                color: #333;
+                margin-top: 30px;
+            }
+			
+			.copy-icon {
+                cursor: pointer;
+            }
+
+            #logs {
+                white-space: pre-wrap;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                background: #fff;
+                padding: 10px;
+                height: 225px;
+                max-width: 1000px;
+                overflow-y: auto;
+                margin: 20px auto;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            .file-naming-note {
+                margin-top: 25px;
+                color: #555;
+                line-height: 1.8;
+            }
+
+            #geotag-options {
+                margin-top: 20px;
+            }
+
+            select {
+                width: 100%;
+                padding: 8px;
+                margin: 5px 0;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>{{ app_name }}</h1>
+
+        <div class="container">
+            <div class="left-section">
+                <form id="process-form">
+                    <label>
+                        <input type="checkbox" name="recursive_search" />
+                        Recursive File Search
+                    </label>
+                    <label>
+                        <input type="checkbox" name="move_files" />
+                        Move Files
+                    </label>
+                    <label>
+                        <input type="checkbox" id="geotag_enabled" name="geotag_enabled" />
+                        Enable Geotagging
+                    </label>
+                    <label style="margin-left: 30px; font-size: 14px;">
+                        <input type="checkbox" id="geotag_override" name="geotag_override" disabled />
+                        Override geotag data, if present
+                    </label>
+                    <br />
+                    <br />
+                    <label> <strong>Media Dir:</strong> {{ media_dir }} </label>
+                    <label> <strong>Move To Dir:</strong> {{ move_to_dir }} </label>
+
+                    <p class="file-naming-note">
+                        <strong>Expected file naming format:</strong><br />
+                        2000-12-30T12.00.00 - Photo Title [tag1;tag2.subtag]
+                    </p>
+
+                    <button id="start-processing-btn" type="submit" disabled>Start Processing</button>
+                </form>
+            </div>
+
+            <div class="right-section">
+                <label>
+                    <strong>Geotagging Data</strong>
+                </label>
+                <div id="geotag-options">
+                    <label>
+                        Country:
+                        <select id="country" name="country" disabled data-placeholder="Country">
+                            <option value="">Select Country</option>
+                        </select>
+                    </label>
+                    <label>
+                        State / Region:
+                        <select id="state" name="state" disabled data-placeholder="State">
+                            <option value="">Select State</option>
+                        </select>
+                    </label>
+                    <label>
+                        City:
+                        <select id="city" name="city" disabled data-placeholder="City">
+                            <option value="">Select City</option>
+                        </select>
+                    </label>
+                    <label>
+                        Location:
+                        <select id="location" name="location" disabled data-placeholder="Location">
+                            <option value="">Select Location</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <h2>Activity Feed <span class="copy-icon" id="copy-btn" data-clipboard-target="#logs">&#128203;</span></h2>
+    </h2>
+    
+        <div id="logs"></div>
+
+        <script>
+        	let geotagData = {};
+		    const clipboard = new ClipboardJS('#copy-btn');
+		
+		    clipboard.on('success', function(e) {
+                e.clearSelection();
+                
+                // Change icon to check mark
+                const copyBtn = document.getElementById("copy-btn");
+                copyBtn.innerHTML = "&#10003;";
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = "&#128203;";
+                }, 2000);
+            });
+		    
+            function fetchGeotagData() {
+                fetch("/geotag-data")
+                    .then((response) => response.json())
+                    .then((data) => {
+                        geotagData = data;
+                        populateDropdowns();
+                    })
+                    .catch((error) => console.error("Error fetching geotag data:", error));
+            }
+
+            function populateDropdowns() {
+                const countrySelect = document.getElementById("country");
+                const stateSelect = document.getElementById("state");
+                const citySelect = document.getElementById("city");
+                const locationSelect = document.getElementById("location");
+
+                // Clear existing options except the first
+                const defaultOptions = ["Select Country", "Select State", "Select City", "Select Location"];
+                countrySelect.innerHTML = `<option value="">${defaultOptions[0]}</option>`;
+                stateSelect.innerHTML = `<option value="">${defaultOptions[1]}</option>`;
+                citySelect.innerHTML = `<option value="">${defaultOptions[2]}</option>`;
+                locationSelect.innerHTML = `<option value="">${defaultOptions[3]}</option>`;
+
+                // Populate country dropdown
+                for (const country in geotagData) {
+                    const countryName = country.split(" - ")[0];
+                    const option = new Option(countryName, country);
+                    countrySelect.add(option);
+                }
+
+                // Enable dropdowns when geotagging is enabled
+                if (document.getElementById("geotag_enabled").checked) {
+                    countrySelect.disabled = false;
+                }
+            }
+            
+            document.addEventListener("DOMContentLoaded", function () {
+		        const checkboxes = document.querySelectorAll("#process-form input[type='checkbox']");
+		        checkboxes.forEach(checkbox => {
+		            checkbox.checked = false;
+		        });
+		        toggleStartButton();
+		    });
+
+            document.getElementById("geotag_enabled").addEventListener("change", function () {
+                const geotagOverride = document.getElementById("geotag_override");
+                const dropdowns = document.querySelectorAll("#geotag-options select");
+
+                dropdowns.forEach((dropdown) => {
+                    dropdown.disabled = !this.checked;
+                    if (!this.checked) {
+                        dropdown.innerHTML = `<option value="">Select ${dropdown.getAttribute("data-placeholder")}</option>`;
+                    }
+                });
+
+                geotagOverride.disabled = !this.checked;
+
+                if (this.checked) {
+                    fetchGeotagData();
+                } else {
+                    geotagOverride.checked = false;
+                }
+
+                toggleStartButton();
+            });
+
+            document.getElementById("country").addEventListener("change", function () {
+                const stateSelect = document.getElementById("state");
+                const citySelect = document.getElementById("city");
+                const locationSelect = document.getElementById("location");
+
+                stateSelect.innerHTML = '<option value="">Select State</option>';
+                citySelect.innerHTML = '<option value="">Select City</option>';
+                locationSelect.innerHTML = '<option value="">Select Location</option>';
+                stateSelect.disabled = false;
+
+                for (const state in geotagData[this.value]) {
+                    const option = new Option(state, state);
+                    stateSelect.add(option);
+                }
+
+                toggleStartButton();
+            });
+
+            document.getElementById("state").addEventListener("change", function () {
+                const citySelect = document.getElementById("city");
+                const locationSelect = document.getElementById("location");
+
+                citySelect.innerHTML = '<option value="">Select City</option>';
+                locationSelect.innerHTML = '<option value="">Select Location</option>';
+                citySelect.disabled = false;
+
+                for (const city in geotagData[document.getElementById("country").value][this.value]) {
+                    const option = new Option(city, city);
+                    citySelect.add(option);
+                }
+
+                toggleStartButton();
+            });
+
+            document.getElementById("location").addEventListener("change", function () {
+                toggleStartButton();
+            });
+
+            document.getElementById("city").addEventListener("change", function () {
+                const locationSelect = document.getElementById("location");
+                const selectedCountry = document.getElementById("country").value;
+                const selectedState = document.getElementById("state").value;
+                const selectedCity = this.value;
+
+                locationSelect.innerHTML = '<option value="">Select Location</option>';
+                locationSelect.disabled = false;
+
+                const locations = geotagData[selectedCountry]?.[selectedState]?.[selectedCity];
+
+                // If locations is an object, iterate over its keys
+                if (locations && typeof locations === "object") {
+                    for (const [locationName, coordinates] of Object.entries(locations)) {
+                        const option = new Option(locationName, locationName);
+                        locationSelect.add(option);
+                    }
+                } else {
+                    console.error("Locations not found or is not an object:", locations);
+                }
+
+                toggleStartButton();
+            });
+
+            function toggleStartButton() {
+                const geotagEnabled = document.getElementById("geotag_enabled").checked;
+                const selectedLocation = document.getElementById("location").value;
+
+                const startButton = document.getElementById("start-processing-btn");
+                startButton.disabled = geotagEnabled && !selectedLocation;
+            }
+
+            document.getElementById("process-form").addEventListener("submit", function (event) {
+                event.preventDefault();
+                const formData = new FormData(this);
+                
+                const selectedLocation = document.getElementById("location").value;
+                const selectedCity = document.getElementById("city").value;
+				const selectedState = document.getElementById("state").value;
+                const selectedCountry = document.getElementById("country").value;
+                
+                if (selectedLocation && selectedCity && selectedState && selectedCountry) {
+			        const coordinates = geotagData[selectedCountry][selectedState][selectedCity][selectedLocation];
+			
+			        formData.append("coordinates", coordinates);
+			        formData.append("location", selectedLocation);
+			        formData.append("city", selectedCity);
+			        formData.append("state", selectedState);
+			        formData.append("country", selectedCountry);
+			    }
+
+                fetch("/start-processing", {
+                    method: "POST",
+                    body: formData,
+                })
+                    .then((response) => {
+                        const logsElement = document.getElementById("logs");
+                        logsElement.innerHTML = "";
+
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+
+                        function readStream() {
+                            reader.read().then(({ done, value }) => {
+                                if (done) return;
+                                logsElement.innerHTML += decoder.decode(value);
+                                logsElement.scrollTop = logsElement.scrollHeight;
+                                readStream();
+                            });
+                        }
+
+                        readStream();
+                    })
+                    .catch((error) => {
+                        console.error("Error:", error);
+                        document.getElementById("logs").innerText = "Error fetching logs.";
+                    });
+            });
+            
+            function copyLogs() {
+	            const logs = document.getElementById("logs").innerText;
+	            if (logs.trim() === "") {
+	                alert("No content to copy in the Activity Feed.");
+	                return;
+	            }
+	            navigator.clipboard.writeText(logs)
+	                .then(() => alert("Activity Feed copied to clipboard!"))
+	                .catch(err => console.error("Failed to copy: ", err));
+	        }
+        </script>
+    </body>
+</html>
