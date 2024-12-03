@@ -110,14 +110,24 @@ def process_photos(recursive_search, move_files, geotag_data):
     else:
         yield "GEOTAG_FILES is false. Files will not be geotaged.\n"
 
-
-        
+	
     yield "-------------- New Process --------------\n"
 
     # Process each file
     for i, file_path in enumerate(file_items):
         file_name = os.path.basename(file_path)
         file_base_name, file_extension = os.path.splitext(file_name)
+
+	# Check if file needs to be deleted
+        if file_name in FILES_TO_DELETE:
+            try:
+                os.remove(file_path)
+                yield f"File deleted: {file_name}\n"
+                continue
+            except Exception as e:
+                yield f"Error deleting {file_name}: {str(e)}\n"
+                yield f"{APP_NAME} ending early\n"
+                return
 
         # Check if file extension is in the whitelist
         if file_extension.lower() not in file_extension_whitelist:
@@ -136,17 +146,6 @@ def process_photos(recursive_search, move_files, geotag_data):
                 file_items[i] = new_file_path
             except Exception as e:
                 yield f"Error updating file extension for {file_name}: {str(e)}\n"
-                yield f"{APP_NAME} ending early\n"
-                return
-
-        # Check if file needs to be deleted
-        if file_name in FILES_TO_DELETE:
-            try:
-                os.remove(file_path)
-                yield f"File deleted: {file_name}\n"
-                continue
-            except Exception as e:
-                yield f"Error deleting {file_name}: {str(e)}\n"
                 yield f"{APP_NAME} ending early\n"
                 return
 
