@@ -109,16 +109,21 @@ def process_photos(recursive_search, move_files, geotag_data):
         yield f"GEOTAG_FILES is true. Files will be geotagged. (Override: {override_status})\n"
     else:
         yield "GEOTAG_FILES is false. Files will not be geotaged.\n"
-
-	
+        
+        
     yield "-------------- New Process --------------\n"
+    
+    if not file_items:
+        yield f"No files found in: {MEDIA_DIR}.\n"
+        yield f"{APP_NAME} ending early\n"
+        return
 
     # Process each file
     for i, file_path in enumerate(file_items):
         file_name = os.path.basename(file_path)
         file_base_name, file_extension = os.path.splitext(file_name)
-
-	# Check if file needs to be deleted
+        
+        # Check if file needs to be deleted
         if file_name in FILES_TO_DELETE:
             try:
                 os.remove(file_path)
@@ -365,18 +370,39 @@ def process_photos(recursive_search, move_files, geotag_data):
 
     # Move files if needed
     if move_files:
+        file_move_operations = []
         yield "All files processed successfully - now moving files\n"
-        for file_path in file_items:
-            file_name = os.path.basename(file_path)
-            
+        for source_file_path in file_items:
+            file_name = os.path.basename(source_file_path)
+        
             year, month = file_name.split('-')[:2]
             month_name = calendar.month_abbr[int(month)].upper()
             formatted_month = f"{month} - {month_name}"
-            
             target_directory = os.path.join(move_to_directory, year, formatted_month)
-            os.makedirs(target_directory, exist_ok=True)
-            new_file_path = os.path.join(target_directory, file_name)
-            shutil.move(file_path, new_file_path)
+            target_file_path = os.path.join(target_directory, file_name)
+        
+            if os.path.exists(target_file_path):
+                conflict_external_target_path = target_file_path.replace(move_to_directory, MOVE_TO_DIR)
+                yield f"Conflict found: {conflict_external_target_path} already exists.\n"
+                yield f"No files will be moved.\n"
+                yield f"{APP_NAME} ending early\n"
+                return
+        
+            file_move_operations.append({
+                "source_path": source_file_path,
+                "target_path": target_file_path,
+            })
+
+
+        for operation in file_move_operations:
+            source_file_path = operation["source_path"]
+            target_file_path = operation["target_path"]
+        
+            # Create the target directory if it doesn't exist
+            os.makedirs(os.path.dirname(target_file_path), exist_ok=True)
+        
+            # Move the file
+            shutil.move(source_file_path, target_file_path)
 
     yield f"{APP_NAME} completed successfully.\n"
     
