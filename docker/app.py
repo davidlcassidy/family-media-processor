@@ -370,8 +370,10 @@ def process_photos(recursive_search, move_files, geotag_data):
 
     # Move files if needed
     if move_files:
-        file_move_operations = []
         yield "All files processed successfully - now moving files\n"
+        file_move_operations = []
+        target_file_paths = set()
+        
         for source_file_path in file_items:
             file_name = os.path.basename(source_file_path)
         
@@ -380,19 +382,26 @@ def process_photos(recursive_search, move_files, geotag_data):
             formatted_month = f"{month} - {month_name}"
             target_directory = os.path.join(move_to_directory, year, formatted_month)
             target_file_path = os.path.join(target_directory, file_name)
+            
+            conflict_external_target_path = target_file_path.replace(move_to_directory, MOVE_TO_DIR)
+            
+            if target_file_path in target_file_paths:
+                yield f"Conflict found: Multiple files have the same target path {target_file_path}\n"
+                yield "No files will be moved.\n"
+                yield f"{APP_NAME} ending early\n"
+                return
         
             if os.path.exists(target_file_path):
-                conflict_external_target_path = target_file_path.replace(move_to_directory, MOVE_TO_DIR)
                 yield f"Conflict found: {conflict_external_target_path} already exists.\n"
                 yield f"No files will be moved.\n"
                 yield f"{APP_NAME} ending early\n"
                 return
         
+            target_file_paths.add(target_file_path)
             file_move_operations.append({
                 "source_path": source_file_path,
                 "target_path": target_file_path,
             })
-
 
         for operation in file_move_operations:
             source_file_path = operation["source_path"]
