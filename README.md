@@ -1,4 +1,5 @@
 
+
 # Family Media Processor
 
 I was facing multiple challenges with organizing my family photos and videos:
@@ -12,7 +13,11 @@ To address these issues, I developed the `Family Media Processor` application to
 
 This Flask-based, Docker-deployable application automates setting metadata, geotagging, and media organization based on user defined settings. It works by extracting dates/times, titles, and tags directly from file names, applying them to the corresponding metadata fields to ensure consistency. Geotagging is managed through dropdowns in the user interface and a configurable config data file. And if enabled, files will also be moved in the desired directory and organized by year and month.
 
-![Family Media Processor Screenshot](screenshots/screenshot_1.png)
+Dashboard
+![Dashboard Screenshot](screenshots/screenshot_1.png)
+
+Media Directory Selector
+![Media Directory Selector](screenshots/screenshot_2.png)
 
 ## Table of Contents
 
@@ -113,10 +118,12 @@ To quickly set up and run the application with Docker, you can use the provided 
                 - APP_NAME=Smith Family Media Processor
                 - FAMILY_LAST_NAME=Smith
                 - GEOTAG_DATA_FILE=/config/geotag_data.yaml
-                - MEDIA_DIR=/family-media-processor/Uploads
-                - MOVE_TO_DIR=/family-media-processor/FamilyPhotos
+                - EXTERNAL_MEDIA_DIR=/family-media-processor/Uploads
+                - EXTERNAL_MOVE_TO_DIR=/family-media-processor/FamilyPhotos
+                - EXCLUDED_DIRECTORIES='@eaDir'
                 - FILES_TO_DELETE=Thumbs.db,.DS_Store
                 - TZ=America/New_York
+                - ENABLE_MOVE_FILES=true
             volumes:
                 - /family-media-processor/Uploads:/media
                 - /family-media-processor/FamilyPhotos:/moveTo
@@ -158,14 +165,17 @@ Default: "Smith"
 Path to the geotagging data file
 Default: "./config/geotag_data.yaml"
 
-- **MEDIA_DIR** (Optional) : 
-Path to the media directory containing files to process - only use in UI for user information, the actual directory should be mounted. 
+- **EXTERNAL_MEDIA_DIR** (Optional, but recommended) : 
+External path to the mounted /media directory containing files to process.
 
-- **MOVE_TO_DIR** (Optional) : 
-Path to the directory where files can be moved after processing - only use in UI for user information, the actual directory should be mounted. 
+- **EXTERNAL_MOVE_TO_DIR** (Optional) : 
+External path to the mounted /moveTo directory where files can be moved after processing - only use in UI for user information. 
+
+- **EXCLUDED_DIRECTORIES** (Optional) :  
+Comma-separated list of directory names that will be excluded (hidden) from the folder selection in the directory selector.
 
 - **FILES_TO_DELETE** (Optional) :  
-Comma-separated list of files to delete
+Comma-separated list of file names. The corresponding files will be deleted during the photo processing.
 
 - **TZ**: 
 Timezone for the container (e.g., `America/New_York`)

@@ -1,4 +1,5 @@
 import calendar
+import json
 import os
 import re
 import shutil
@@ -11,7 +12,7 @@ from flask import Flask, render_template, request, Response, stream_with_context
 
 app = Flask(__name__)
 
-# Directories
+# Internal Directories
 media_directory = "/media"
 move_to_directory = "/moveTo"
 
@@ -19,10 +20,12 @@ move_to_directory = "/moveTo"
 FAMILY_LAST_NAME = os.getenv("FAMILY_LAST_NAME", "Smith")    
 APP_NAME = os.getenv("APP_NAME", f"{FAMILY_LAST_NAME} Family Media Processor")
 GEOTAG_DATA_FILE = os.getenv("GEOTAG_DATA_FILE", "./config/geotag_data.yaml")
-MEDIA_DIR = os.getenv("MEDIA_DIR", "")
-MOVE_TO_DIR = os.getenv("MOVE_TO_DIR", "")
+EXTERNAL_MEDIA_DIR = os.getenv("EXTERNAL_MEDIA_DIR", media_directory)
+EXTERNAL_MOVE_TO_DIR = os.getenv("EXTERNAL_MOVE_TO_DIR", move_to_directory)
+EXCLUDED_DIRECTORIES = os.getenv("EXCLUDED_DIRECTORIES", "").split(',')
 FILES_TO_DELETE = os.getenv("FILES_TO_DELETE", "").split(',')
 TZ = os.getenv("TZ", "GMT")
+ENABLE_MOVE_FILES = os.getenv("ENABLE_MOVE_FILES", "false").lower() == "true"
 VERBOSE_LOGGING = os.getenv("VERBOSE_LOGGING", "false").lower() == "true"
 
 # Local Variables
@@ -30,14 +33,44 @@ tag_delimiter = ";"
 tag_hierarchy_delimiter = "."
 family_name = f"{FAMILY_LAST_NAME} Family"
 copyright_notice = f"{family_name} Photos"
-gps_coordinates_round_digits = 5  # some software seems to struggle with longer gps coordinates
+gps_coordinates_round_digits = 5  # Some software seems to struggle with longer gps coordinates
 file_extension_whitelist = ['.jpg', '.jpeg', '.mp4']
 extension_conversions = {".jpeg": ".jpg",}
 
 
 @app.route('/')
 def index():
-    return render_template('index.html', app_name=APP_NAME, media_dir=MEDIA_DIR, move_to_dir=MOVE_TO_DIR)
+    return render_template('index.html', app_name=APP_NAME, move_to_dir=EXTERNAL_MOVE_TO_DIR, move_files_enabled=ENABLE_MOVE_FILES)
+    
+@app.route('/directory-structure', methods=['GET'])
+def directory_structure():
+    def build_tree(root_path):
+    	
+        directory_name = os.path.basename(root_path)
+        if directory_name in EXCLUDED_DIRECTORIES:
+            return None
+            
+        tree = {
+            'name': directory_name,
+            'internal_path': root_path,
+            'external_path': root_path.replace(media_directory, EXTERNAL_MEDIA_DIR, 1),
+            'subdirectories': []
+        }
+        
+        try:
+            for entry in os.scandir(root_path):
+                if entry.is_dir():
+                    sub_tree = build_tree(entry.path)
+                    if sub_tree:
+                        tree['subdirectories'].append(sub_tree)
+        except PermissionError:
+            pass  # Skip directories we can't access
+        return tree
+
+    directory_tree = build_tree(media_directory)
+    if directory_tree:
+        directory_tree['name'] = EXTERNAL_MEDIA_DIR
+    return jsonify(directory_tree)
     
 @app.route('/geotag-data', methods=['GET'])
 def geotag_data():
@@ -49,41 +82,34 @@ def geotag_data():
 
 @app.route('/start-processing', methods=['POST'])
 def start_processing():
-    recursive_search = 'recursive_search' in request.form
-    move_files = 'move_files' in request.form
-    geotag_enabled = 'geotag_enabled' in request.form
-    geotag_override = 'geotag_override' in request.form
+    data = request.get_json()
 
-    geotag_data = None
-    if geotag_enabled:	
+    if data['geotag_enabled']:
         try:
-            latitude, longitude = map(float, request.form.get('coordinates').split(','))
+            latitude, longitude = map(float, data['geotag_data']['coordinates'].split(','))
             latitude = round(latitude, gps_coordinates_round_digits)
             longitude = round(longitude, gps_coordinates_round_digits)
         except ValueError:
             return "Error: Invalid coordinates format. Ensure they are number pairs.", 400
-        
-        country, country_code = request.form.get('country').split(' - ', 1)
-            
-        geotag_data = {
-        	"longitude": longitude,
-            "latitude": latitude,
-            
-            "location": request.form.get('location'),
-            "city": request.form.get('city'),
-            "state": request.form.get('state'),
+
+        country, country_code = data['geotag_data']['country'].split(' - ', 1)
+
+        data['geotag_data'] = {
+            "location": data['geotag_data']['location'],
+            "city": data['geotag_data']['city'],
+            "state": data['geotag_data']['state'],
             "country": country,
-            "country_code": country_code, 
-            
-            "override": geotag_override,
+            "country_code": country_code,
+            "longitude": longitude,
+            "latitude": latitude,
         }
 
-    return Response(stream_with_context(process_photos(recursive_search, move_files, geotag_data)), mimetype='text/plain')
+    return Response(stream_with_context(process_photos_stream(data)), mimetype='text/plain')
 
 
-def process_photos(recursive_search, move_files, geotag_data):
+def process_photos_stream(data):
 	
-	# Validate env variables
+    # Validate env variables
     if not is_valid_timezone(TZ):
         yield f"Invalid Environment Variables: TZ={TZ}\n"
         yield f"{APP_NAME} ending early\n"
@@ -91,21 +117,23 @@ def process_photos(recursive_search, move_files, geotag_data):
 
     # Select files based on recursion mode
     file_items = []
-    if recursive_search:
+    internal_selected_media_directory = data['selected_media_directory'].replace(EXTERNAL_MEDIA_DIR, media_directory);
+    if data['recursive_search']:
         yield "RECURSIVE_SEARCH is true. Processing files in all subdirectories.\n"
-        for root, _, files in os.walk(media_directory):
+        for root, _, files in os.walk(internal_selected_media_directory):
             file_items.extend(os.path.join(root, file) for file in files)
     else:
         yield "RECURSIVE_SEARCH is false. Processing files in the top-level directory only.\n"
-        file_items = [os.path.join(media_directory, f) for f in os.listdir(media_directory) if os.path.isfile(os.path.join(media_directory, f))]
+        file_items = [os.path.join(internal_selected_media_directory, f) for f in os.listdir(internal_selected_media_directory) if os.path.isfile(os.path.join(internal_selected_media_directory, f))]
 
     # Log user options
-    if move_files:
-        yield "MOVE_FILES is true. Files will be moved.\n"
-    else:
-        yield "MOVE_FILES is false. Files will not be moved.\n"
-    if geotag_data:
-        override_status = "enabled" if geotag_data["override"] else "disabled"
+    if ENABLE_MOVE_FILES:
+        if data['move_files_selected']:
+            yield "MOVE_FILES is true. Files will be moved.\n"
+        else:
+            yield "MOVE_FILES is false. Files will not be moved.\n"
+    if data['geotag_enabled']:
+        override_status = "enabled" if data['geotag_override'] else "disabled"
         yield f"GEOTAG_FILES is true. Files will be geotagged. (Override: {override_status})\n"
     else:
         yield "GEOTAG_FILES is false. Files will not be geotaged.\n"
@@ -114,7 +142,7 @@ def process_photos(recursive_search, move_files, geotag_data):
     yield "-------------- New Process --------------\n"
     
     if not file_items:
-        yield f"No files found in: {MEDIA_DIR}.\n"
+        yield f"No files found in: {data['selected_media_directory']}.\n"
         yield f"{APP_NAME} ending early\n"
         return
 
@@ -244,6 +272,7 @@ def process_photos(recursive_search, move_files, geotag_data):
             f"-DerivedFromOriginalDocumentID=",
             f"-OriginalDocumentID=",
             f"-DocumentID=",
+            f"-Software=",
             f"-HistoryAction=",
             f"-HistoryChanged=",
             f"-HistoryInstanceID=",
@@ -254,7 +283,6 @@ def process_photos(recursive_search, move_files, geotag_data):
                 
             file_path
         ]
-            
             
         # Tags Fields (fields must be cleared first)
         subprocess.run([
@@ -283,24 +311,24 @@ def process_photos(recursive_search, move_files, geotag_data):
                 
                 
         # Geotag Fields
-        if geotag_data:
+        if data['geotag_enabled']:
             existing_gps = has_existing_gps(file_path)
                 
-            if existing_gps and not geotag_data["override"]:
+            if existing_gps and not data['geotag_override']:
                 yield f"   Warning: Geotag data already exists for: {file_name}\n"
 
-            elif not existing_gps or geotag_data["override"]:
-                if existing_gps and geotag_data["override"]:
+            elif not existing_gps or data['geotag_override']:
+                if existing_gps and data['geotag_override']:
                     yield f"   Warning: Overriding existing geotag data for: {file_name}\n"
                     
-                tri_coordinates = f"{geotag_data['latitude']}, {geotag_data['longitude']}, 0"
-                location_string = f"{geotag_data['city']}, {geotag_data['state']}, {geotag_data['country']}"
+                tri_coordinates = f"{data['geotag_data']['latitude']}, {data['geotag_data']['longitude']}, 0"
+                location_string = f"{data['geotag_data']['city']}, {data['geotag_data']['state']}, {data['geotag_data']['country']}"
                       
                 exif_command.extend([
-                    f"-composite:gpslatitude={geotag_data['latitude']}",
-                    f"-xmp:gpslatitude={geotag_data['latitude']}",
-                    f"-composite:gpslongitude={geotag_data['longitude']}",
-                    f"-xmp:gpslongitude={geotag_data['longitude']}",
+                    f"-composite:gpslatitude={data['geotag_data']['latitude']}",
+                    f"-xmp:gpslatitude={data['geotag_data']['latitude']}",
+                    f"-composite:gpslongitude={data['geotag_data']['longitude']}",
+                    f"-xmp:gpslongitude={data['geotag_data']['longitude']}",
                     f"-GPSAltitude=0",
                     f"-GPSAltitudeRef=0",
                         
@@ -308,27 +336,27 @@ def process_photos(recursive_search, move_files, geotag_data):
                     f"-Userdata:GPSCoordinates={tri_coordinates}",
                     f"-Itemlist:GPSCoordinates={tri_coordinates}",
                         
-                    f"-XMP:City={geotag_data['city']}",
-                    f"-XMP:State={geotag_data['state']}",
-                    f"-XMP:CountryCode={geotag_data['country_code']}",
-                    f"-XMP:Country={geotag_data['country']}",
-                    f"-XMP:CountryName={geotag_data['country']}",
+                    f"-XMP:City={data['geotag_data']['city']}",
+                    f"-XMP:State={data['geotag_data']['state']}",
+                    f"-XMP:CountryCode={data['geotag_data']['country_code']}",
+                    f"-XMP:Country={data['geotag_data']['country']}",
+                    f"-XMP:CountryName={data['geotag_data']['country']}",
                        
-                    f"-IPTC:City={geotag_data['city']}",
-                    f"-IPTC:Province-State={geotag_data['state']}",
-                    f"-IPTC:Country-PrimaryLocationCode={geotag_data['country_code']}",
-                    f"-IPTC:Country-PrimaryLocationName={geotag_data['country']}",
+                    f"-IPTC:City={data['geotag_data']['city']}",
+                    f"-IPTC:Province-State={data['geotag_data']['state']}",
+                    f"-IPTC:Country-PrimaryLocationCode={data['geotag_data']['country_code']}",
+                    f"-IPTC:Country-PrimaryLocationName={data['geotag_data']['country']}",
                         
-                    f"-XMP-photoshop:City={geotag_data['city']}",
-                    f"-XMP-photoshop:State={geotag_data['state']}",
-                    f"-XMP-photoshop:Country={geotag_data['country']}",
+                    f"-XMP-photoshop:City={data['geotag_data']['city']}",
+                    f"-XMP-photoshop:State={data['geotag_data']['state']}",
+                    f"-XMP-photoshop:Country={data['geotag_data']['country']}",
                         
-                    f"-XMP-iptcExt:LocationShownCity={geotag_data['city']}",
-                    f"-XMP-iptcExt:LocationShownProvinceState={geotag_data['state']}",
-                    f"-XMP-iptcExt:LocationShownCountryCode={geotag_data['country_code']}",
-                    f"-XMP-iptcExt:LocationShownCountryName={geotag_data['country']}",
-                    f"-XMP-iptcExt:LocationShownGPSLatitude={geotag_data['latitude']}",
-                    f"-XMP-iptcExt:LocationShownGPSLongitude={geotag_data['longitude']}",
+                    f"-XMP-iptcExt:LocationShownCity={data['geotag_data']['city']}",
+                    f"-XMP-iptcExt:LocationShownProvinceState={data['geotag_data']['state']}",
+                    f"-XMP-iptcExt:LocationShownCountryCode={data['geotag_data']['country_code']}",
+                    f"-XMP-iptcExt:LocationShownCountryName={data['geotag_data']['country']}",
+                    f"-XMP-iptcExt:LocationShownGPSLatitude={data['geotag_data']['latitude']}",
+                    f"-XMP-iptcExt:LocationShownGPSLongitude={data['geotag_data']['longitude']}",
                     f"-XMP-iptcExt:LocationShownGPSAltitude=0",
                     f"-XMP-iptcExt:LocationShownGPSAltitudeRef=0",
                     f"-XMP-iptcExt:LocationShownLocationName={location_string}",
@@ -369,7 +397,7 @@ def process_photos(recursive_search, move_files, geotag_data):
 
 
     # Move files if needed
-    if move_files:
+    if ENABLE_MOVE_FILES and data['move_files_selected']:
         yield "All files processed successfully - now moving files\n"
         file_move_operations = []
         target_file_paths = set()
@@ -383,16 +411,16 @@ def process_photos(recursive_search, move_files, geotag_data):
             target_directory = os.path.join(move_to_directory, year, formatted_month)
             target_file_path = os.path.join(target_directory, file_name)
             
-            conflict_external_target_path = target_file_path.replace(move_to_directory, MOVE_TO_DIR)
+            external_target_file_path = target_file_path.replace(move_to_directory, EXTERNAL_MOVE_TO_DIR)
             
             if target_file_path in target_file_paths:
-                yield f"Conflict found: Multiple files have the same target path {target_file_path}\n"
+                yield f"Conflict found: Multiple files have the same target path {external_target_file_path}\n"
                 yield "No files will be moved.\n"
                 yield f"{APP_NAME} ending early\n"
                 return
         
             if os.path.exists(target_file_path):
-                yield f"Conflict found: {conflict_external_target_path} already exists.\n"
+                yield f"Conflict found: {external_target_file_path} already exists.\n"
                 yield f"No files will be moved.\n"
                 yield f"{APP_NAME} ending early\n"
                 return
