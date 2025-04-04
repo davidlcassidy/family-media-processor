@@ -8,186 +8,186 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
         <style>
             * {
-				box-sizing: border-box;
-			}
-			body {
-				font-family: "Arial", sans-serif;
-				color: #555;
-				background-color: #f4f4f4;
-				margin: 0;
-				padding: 20px;
-			}
-			h1 {
-				text-align: center;
-				color: #333;
-			}
-			h2 {
-				text-align: center;
-				color: #333;
-				margin-top: 30px;
-			}
-			button {
-				border: none;
-				border-radius: 4px;
-				width: 100%;
-				cursor: pointer;
-			}
-			.container {
-				display: flex;
-				justify-content: space-between;
-				max-width: 1000px;
-				margin: 0 auto;
-				flex-wrap: wrap;
-			}
-			.left-section,.right-section {
-				background: #fff;
-				border-radius: 8px;
-				padding: 20px;
-				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-				flex-basis: 48%;
-				max-width: 48%;
-				flex-grow: 1;
-			}
-			.left-section {
-				margin-left: 0;
-			}
-			.right-section {
-				margin-left: auto;
-			}
-			label {
-				display: block;
-				margin-bottom: 10px;
-				margin-right: 10px;
-				font-size: 16px;
-			}
-			#selected_media_directory {
-				min-height: 28px;
-				padding-right: 10px;
-				border-style: solid;
-				border-width: 1px;
-				border-radius: 4px;
-				padding: 4px;
-				flex-grow: 1;
-			}
-			#search-button {
-				display: flex;
-				width: 28px;
-				margin-left: 10px;
-				background-color: #0083fb ;
-				padding: 6px 10px;
-				justify-content: center;
-				align-items: center;
-			}
-			#search-button:hover {
-				background-color: #016bcc;
-			}
-			#search-button i {
-				font-size: 16px;
-				color: white;
-			}
-			#start-processing-button {
-				background-color: #28a745;
-				color: white;
-				padding: 10px 15px;
-				font-size: 16px;
-			}
-			#start-processing-button:disabled {
-				background-color: #ccc;
-				cursor: not-allowed;
-			}
-			#start-processing-button:hover {
-				background-color: #218838;
-			}
-			select {
-				width: 100%;
-				padding: 8px;
-				margin: 5px 0;
-			}
-			#copy-button {
-				cursor: pointer;
-			}
-			#logs {
-				white-space: pre-wrap;
-				border: 1px solid #ddd;
-				border-radius: 8px;
-				background: #fff;
-				padding: 10px;
-				height: 225px;
-				max-width: 1000px;
-				overflow-y: auto;
-				margin: 20px auto;
-				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-			}
-			#directoryModal {
-				display: none;
-				position: fixed;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				background: rgba(0, 0, 0, 0.75);
-			}
-			#modalContent {
-				background: #fff;
-				margin: 10% auto;
-				width: 80%;
-				height: 70%;
-				overflow-y: auto;
-			}
-			#modalHeader {
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				background-color: #dfeefb;
-				padding: 20px;
-				font-size: 18px;
-				font-weight: bold;
-				position: sticky;
-				top: 0;
-				z-index: 1;
-			}
-			#modalButtons {
-				display: flex;
-				gap: 10px;
-			}
-			.header-button {
-				background-color: #007bff;
-				color: white;
-				padding: 5px 10px;
-			}
-			.header-button:hover {
-				background-color: #0056b3;
-			}
-			.header-button:disabled {
-				background-color: #cccccc;
-				cursor: not-allowed;
-			}
-			#close-button {
-				background-color: #dc3545;
-			}
-			#close-button:hover {
-				background-color: #bd2130;
-			}
-			.toggle-button {
-				margin-right: 10px;
-				cursor: pointer;
-			}
-			#directoryTree {
-				list-style-type: none;
-				padding-left: 30px;
-				padding-top: 17px;
-			}
-			.directory-item {
-				cursor: pointer;
-				display: flex;
-				padding: 5px 0;
-			}
-			.directory-item:hover {
-				background-color: #f0f0f0;
-			}
-			.selected-directory {
-				background-color: #dfeefb;
-			}
+                box-sizing: border-box;
+            }
+            body {
+                font-family: "Arial", sans-serif;
+                color: #555;
+                background-color: #f4f4f4;
+                margin: 0;
+                padding: 20px;
+            }
+            h1 {
+                text-align: center;
+                color: #333;
+            }
+            h2 {
+                text-align: center;
+                color: #333;
+                margin-top: 30px;
+            }
+            button {
+                border: none;
+                border-radius: 4px;
+                width: 100%;
+                cursor: pointer;
+            }
+            .container {
+                display: flex;
+                justify-content: space-between;
+                max-width: 1000px;
+                margin: 0 auto;
+                flex-wrap: wrap;
+            }
+            .left-section,.right-section {
+                background: #fff;
+                border-radius: 8px;
+                padding: 20px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                flex-basis: 48%;
+                max-width: 48%;
+                flex-grow: 1;
+            }
+            .left-section {
+                margin-left: 0;
+            }
+            .right-section {
+                margin-left: auto;
+            }
+            label {
+                display: block;
+                margin-bottom: 10px;
+                margin-right: 10px;
+                font-size: 16px;
+            }
+            #selected_media_directory {
+                min-height: 28px;
+                padding-right: 10px;
+                border-style: solid;
+                border-width: 1px;
+                border-radius: 4px;
+                padding: 4px;
+                flex-grow: 1;
+            }
+            #search-button {
+                display: flex;
+                width: 28px;
+                margin-left: 10px;
+                background-color: #0083fb ;
+                padding: 6px 10px;
+                justify-content: center;
+                align-items: center;
+            }
+            #search-button:hover {
+                background-color: #016bcc;
+            }
+            #search-button i {
+                font-size: 16px;
+                color: white;
+            }
+            #start-processing-button {
+                background-color: #28a745;
+                color: white;
+                padding: 10px 15px;
+                font-size: 16px;
+            }
+            #start-processing-button:disabled {
+                background-color: #ccc;
+                cursor: not-allowed;
+            }
+            #start-processing-button:hover {
+                background-color: #218838;
+            }
+            select {
+                width: 100%;
+                padding: 8px;
+                margin: 5px 0;
+            }
+            #copy-button {
+                cursor: pointer;
+            }
+            #logs {
+                white-space: pre-wrap;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                background: #fff;
+                padding: 10px;
+                height: 225px;
+                max-width: 1000px;
+                overflow-y: auto;
+                margin: 20px auto;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }
+            #directoryModal {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.75);
+            }
+            #modalContent {
+                background: #fff;
+                margin: 10% auto;
+                width: 80%;
+                height: 70%;
+                overflow-y: auto;
+            }
+            #modalHeader {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background-color: #dfeefb;
+                padding: 20px;
+                font-size: 18px;
+                font-weight: bold;
+                position: sticky;
+                top: 0;
+                z-index: 1;
+            }
+            #modalButtons {
+                display: flex;
+                gap: 10px;
+            }
+            .header-button {
+                background-color: #007bff;
+                color: white;
+                padding: 5px 10px;
+            }
+            .header-button:hover {
+                background-color: #0056b3;
+            }
+            .header-button:disabled {
+                background-color: #cccccc;
+                cursor: not-allowed;
+            }
+            #close-button {
+                background-color: #dc3545;
+            }
+            #close-button:hover {
+                background-color: #bd2130;
+            }
+            .toggle-button {
+                margin-right: 10px;
+                cursor: pointer;
+            }
+            #directoryTree {
+                list-style-type: none;
+                padding-left: 30px;
+                padding-top: 17px;
+            }
+            .directory-item {
+                cursor: pointer;
+                display: flex;
+                padding: 5px 0;
+            }
+            .directory-item:hover {
+                background-color: #f0f0f0;
+            }
+            .selected-directory {
+                background-color: #dfeefb;
+            }
         </style>
     </head>
     <body>
@@ -213,14 +213,14 @@
                     <input type="checkbox" id="geotag_override" name="geotag_override" disabled />
                     Override geotag data, if present
                 </label>
-				<p style="margin-top: 30px; margin-bottom: 2px;">
+                <p style="margin-top: 30px; margin-bottom: 2px;">
                     <strong>Media Directory:</strong>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-				        <span id="selected_media_directory"></span>
-				        <button id="search-button" onclick="showDirectoryModal()">
-				            <i class="fas fa-search"></i>
-				        </button>
-				    </div>
+                        <span id="selected_media_directory"></span>
+                        <button id="search-button" onclick="showDirectoryModal()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
                 </p>
                 {% if move_files_enabled %}
                 <p>
@@ -275,30 +275,30 @@
         <div id="directoryModal">
             <div id="modalContent">
                 <div id="modalHeader">
-				    <span>Select Media Directory</span>
-				    <div id="modalButtons">
-				        <button id="selectDirectoryButton" class="header-button" onclick="selectDirectory()">
-						    <i class="fas fa-check" style="color: white;"></i>
-						</button>
-						<button id="close-button" class="header-button" onclick="modal.style.display = 'none';">
-						    <i class="fas fa-times" style="color: white;"></i>
-						</button>
-				    </div>
-				</div>
+                    <span>Select Media Directory</span>
+                    <div id="modalButtons">
+                        <button id="selectDirectoryButton" class="header-button" onclick="selectDirectory()">
+                            <i class="fas fa-check" style="color: white;"></i>
+                        </button>
+                        <button id="close-button" class="header-button" onclick="modal.style.display = 'none';">
+                            <i class="fas fa-times" style="color: white;"></i>
+                        </button>
+                    </div>
+                </div>
                 <div id="directoryTree"></div>
             </div>
         </div>
 
         <script>
-        	let geotagData = {};
-		    const clipboard = new ClipboardJS('#copy-button');
-		    
-		    let selectedDirectoryPath = '';
+            let geotagData = {};
+            const clipboard = new ClipboardJS('#copy-button');
+
+            let selectedDirectoryPath = '';
             const modal = document.getElementById('directoryModal');
-		
-		    clipboard.on('success', function(e) {
+
+            clipboard.on('success', function(e) {
                 e.clearSelection();
-                
+
                 // Change icon to check mark
                 const copyBtn = document.getElementById("copy-button");
                 copyBtn.innerHTML = "&#10003;";
@@ -307,7 +307,7 @@
                     copyBtn.innerHTML = "&#128203;";
                 }, 2000);
             });
-		    
+
             function fetchGeotagData() {
                 fetch("/geotag-data")
                     .then((response) => response.json())
@@ -343,13 +343,13 @@
                     countrySelect.disabled = false;
                 }
             }
-            
+
             document.addEventListener("DOMContentLoaded", function () {
-		        document.querySelectorAll("input[type='checkbox']").forEach(checkbox => {
-		            checkbox.checked = false;
-		        });
-		        toggleStartButton();
-		    });
+                document.querySelectorAll("input[type='checkbox']").forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                toggleStartButton();
+            });
 
             document.getElementById("geotag_enabled").addEventListener("change", function () {
                 const geotagOverride = document.getElementById("geotag_override");
@@ -434,85 +434,84 @@
             });
 
             function toggleStartButton() {
-			    const isGeotagEnabled = document.getElementById("geotag_enabled").checked;
-			    const hasSelectedLocation = document.getElementById("location").value;
-			    const hasSelectedMediaDirectory = document.getElementById("selected_media_directory").innerText.trim() !== '';
-			
-			    const startButton = document.getElementById("start-processing-button");
-			    startButton.disabled = !hasSelectedMediaDirectory || (isGeotagEnabled && !hasSelectedLocation);
-			}
+                const isGeotagEnabled = document.getElementById("geotag_enabled").checked;
+                const hasSelectedLocation = document.getElementById("location").value;
+                const hasSelectedMediaDirectory = document.getElementById("selected_media_directory").innerText.trim() !== '';
+            
+                const startButton = document.getElementById("start-processing-button");
+                startButton.disabled = !hasSelectedMediaDirectory || (isGeotagEnabled && !hasSelectedLocation);
+            }
 
             function startProcessing() {
-            	const isGeotagEnabled = document.getElementById("geotag_enabled").checked;
-            	let geotagDataPayload;
-            	
-            	if (isGeotagEnabled) {
-            		const location = document.getElementById("location").value;
-            		const city = document.getElementById("city").value;
-            		const state = document.getElementById("state").value;
-            		const country = document.getElementById("country").value;
-            		geotagDataPayload = {
-		                location: location,
-		                city: city,
-		                state: state,
-		                country: country,
-		                coordinates: geotagData[country]?.[state]?.[city]?.[location],
-		            }
-            	}
-	
-	            const payload = {
-	                recursive_search: document.getElementById("recursive_search")?.checked || false,
-	                move_files_selected: document.getElementById("move_files")?.checked || false,
-	                geotag_enabled: isGeotagEnabled,
-	                geotag_override: document.getElementById("geotag_override")?.checked || false,
-	                selected_media_directory: document.getElementById("selected_media_directory").innerText.trim(),
-	                geotag_data: geotagDataPayload || undefined
-	            };
-			
-			    fetch("/start-processing", {
-			        method: "POST",
-			        headers: { "Content-Type": "application/json" },
-			        body: JSON.stringify(payload)
-			    })
-			    .then(async (response) => {
-			        const logsElement = document.getElementById("logs");
-			        logsElement.innerHTML = "";
-			
-			        const reader = response.body.getReader();
-			        const decoder = new TextDecoder();
-			        let done = false;
-			
-			        while (!done) {
-			            const { value, done: streamDone } = await reader.read();
-			            done = streamDone;
-			            if (value) {
-			                logsElement.innerHTML += decoder.decode(value);
-			                logsElement.scrollTop = logsElement.scrollHeight;
-			            }
-			        }
-			    })
-			    .catch((error) => {
-			        console.error("Error:", error);
-			        document.getElementById("logs").innerText = "Error starting media processing.";
-			    });
-			}
+                const isGeotagEnabled = document.getElementById("geotag_enabled").checked;
+                let geotagDataPayload;
 
-            
+                if (isGeotagEnabled) {
+                    const location = document.getElementById("location").value;
+                    const city = document.getElementById("city").value;
+                    const state = document.getElementById("state").value;
+                    const country = document.getElementById("country").value;
+                    geotagDataPayload = {
+                        location: location,
+                        city: city,
+                        state: state,
+                        country: country,
+                        coordinates: geotagData[country]?.[state]?.[city]?.[location],
+                    }
+                }
+    
+                const payload = {
+                    recursive_search: document.getElementById("recursive_search")?.checked || false,
+                    move_files_selected: document.getElementById("move_files")?.checked || false,
+                    geotag_enabled: isGeotagEnabled,
+                    geotag_override: document.getElementById("geotag_override")?.checked || false,
+                    selected_media_directory: document.getElementById("selected_media_directory").innerText.trim(),
+                    geotag_data: geotagDataPayload || undefined
+                };
+
+                fetch("/start-processing", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                })
+                .then(async (response) => {
+                    const logsElement = document.getElementById("logs");
+                    logsElement.innerHTML = "";
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let done = false;
+
+                    while (!done) {
+                        const { value, done: streamDone } = await reader.read();
+                        done = streamDone;
+                        if (value) {
+                            logsElement.innerHTML += decoder.decode(value);
+                            logsElement.scrollTop = logsElement.scrollHeight;
+                        }
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error:", error);
+                    document.getElementById("logs").innerText = "Error starting media processing.";
+                });
+            }
+
             function copyLogs() {
-	            const logs = document.getElementById("logs").innerText;
-	            if (logs.trim() === "") {
-	                alert("No content to copy in the Activity Feed.");
-	                return;
-	            }
-	            navigator.clipboard.writeText(logs)
-	                .then(() => alert("Activity Feed copied to clipboard!"))
-	                .catch(err => console.error("Failed to copy: ", err));
-	        }
-	        
-	        function showDirectoryModal() {
-	        	document.getElementById('directoryTree').innerHTML = '';
+                const logs = document.getElementById("logs").innerText;
+                if (logs.trim() === "") {
+                    alert("No content to copy in the Activity Feed.");
+                    return;
+                }
+                navigator.clipboard.writeText(logs)
+                    .then(() => alert("Activity Feed copied to clipboard!"))
+                    .catch(err => console.error("Failed to copy: ", err));
+            }
+
+            function showDirectoryModal() {
+                document.getElementById('directoryTree').innerHTML = '';
                 modal.style.display = 'block';
-    			document.querySelector('#selectDirectoryButton').disabled = true;
+                document.querySelector('#selectDirectoryButton').disabled = true;
                 
                 fetch('/directory-structure')
                     .then(response => response.json())
@@ -522,73 +521,73 @@
                     .catch(console.error);
             }
 
-			function buildDirectoryTree(directory, parentElement) {
-				const directoryItem = document.createElement('div');
-			    directoryItem.classList.add('directory-item');
-			    
-			    directoryItem.onclick = function () {
-			        selectedDirectoryPath = directory.external_path;
-			        const previouslySelected = document.querySelector('.selected-directory');
-			        if (previouslySelected) {
-			            previouslySelected.classList.remove('selected-directory');
-			        }
-			        directoryItem.classList.add('selected-directory');
-			        document.querySelector('#modalHeader .header-button').disabled = false;
-			    };
-			    
-			    const toggleBtn = document.createElement('span');
-			    if (directory.subdirectories && directory.subdirectories.length > 0) {
-			        toggleBtn.classList.add('toggle-button');
-			        toggleBtn.innerText = '[+]';
-			        
-			        toggleBtn.onclick = function (event) {
-			            event.stopPropagation();
-			            
-			            const subdirectories = directoryItem.nextElementSibling;
-			            if (subdirectories.style.display === 'none') {
-			                subdirectories.style.display = 'block';
-			                toggleBtn.innerText = '[-]';
-			            } else {
-			                subdirectories.style.display = 'none';
-			                toggleBtn.innerText = '[+]';
-			            }
-			        };
-			    }
-			
-			    const nameSpan = document.createElement('span');
-			    nameSpan.innerText = directory.name;
-			    nameSpan.style.fontWeight = 'bold';
-			    
-			    directoryItem.appendChild(toggleBtn);
-			    directoryItem.appendChild(nameSpan);
-			
-			    const subdirectories = document.createElement('div');
-			    subdirectories.classList.add('subdirectories');
-			    subdirectories.style.display = 'none';
-			    subdirectories.style.paddingLeft = '45px';
-			    
-			    parentElement.appendChild(directoryItem);
-			    parentElement.appendChild(subdirectories);
-			    
-			    // Expand root directory by default
-			    if (parentElement.id === 'directoryTree' && directory.subdirectories && directory.subdirectories.length > 0) {
-			        subdirectories.style.display = 'block';
-			        toggleBtn.innerText = '[-]';
-			    }
-			
-			    if (directory.subdirectories && directory.subdirectories.length > 0) {
-			    	directory.subdirectories.sort((a, b) => a.name.localeCompare(b.name));
-			        directory.subdirectories.forEach(subdir => {
-			            buildDirectoryTree(subdir, subdirectories);
-			        });
-			    }
-			}
-			
-			function selectDirectory() {
-			    document.getElementById('selected_media_directory').innerText = selectedDirectoryPath;
-			    modal.style.display = 'none';
-			    toggleStartButton();
-			}
+            function buildDirectoryTree(directory, parentElement) {
+                const directoryItem = document.createElement('div');
+                directoryItem.classList.add('directory-item');
+                
+                directoryItem.onclick = function () {
+                    selectedDirectoryPath = directory.external_path;
+                    const previouslySelected = document.querySelector('.selected-directory');
+                    if (previouslySelected) {
+                        previouslySelected.classList.remove('selected-directory');
+                    }
+                    directoryItem.classList.add('selected-directory');
+                    document.querySelector('#modalHeader .header-button').disabled = false;
+                };
+
+                const toggleBtn = document.createElement('span');
+                if (directory.subdirectories && directory.subdirectories.length > 0) {
+                    toggleBtn.classList.add('toggle-button');
+                    toggleBtn.innerText = '[+]';
+ 
+                    toggleBtn.onclick = function (event) {
+                        event.stopPropagation();
+                        
+                        const subdirectories = directoryItem.nextElementSibling;
+                        if (subdirectories.style.display === 'none') {
+                            subdirectories.style.display = 'block';
+                            toggleBtn.innerText = '[-]';
+                        } else {
+                            subdirectories.style.display = 'none';
+                            toggleBtn.innerText = '[+]';
+                        }
+                    };
+                }
+
+                const nameSpan = document.createElement('span');
+                nameSpan.innerText = directory.name;
+                nameSpan.style.fontWeight = 'bold';
+                
+                directoryItem.appendChild(toggleBtn);
+                directoryItem.appendChild(nameSpan);
+
+                const subdirectories = document.createElement('div');
+                subdirectories.classList.add('subdirectories');
+                subdirectories.style.display = 'none';
+                subdirectories.style.paddingLeft = '45px';
+
+                parentElement.appendChild(directoryItem);
+                parentElement.appendChild(subdirectories);
+
+                // Expand root directory by default
+                if (parentElement.id === 'directoryTree' && directory.subdirectories && directory.subdirectories.length > 0) {
+                    subdirectories.style.display = 'block';
+                    toggleBtn.innerText = '[-]';
+                }
+
+                if (directory.subdirectories && directory.subdirectories.length > 0) {
+                    directory.subdirectories.sort((a, b) => a.name.localeCompare(b.name));
+                    directory.subdirectories.forEach(subdir => {
+                        buildDirectoryTree(subdir, subdirectories);
+                    });
+                }
+            }
+
+            function selectDirectory() {
+                document.getElementById('selected_media_directory').innerText = selectedDirectoryPath;
+                modal.style.display = 'none';
+                toggleStartButton();
+            }
         </script>
     </body>
 </html>

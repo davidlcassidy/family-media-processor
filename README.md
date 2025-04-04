@@ -1,5 +1,6 @@
 
 
+
 # Family Media Processor
 
 I was facing multiple challenges with organizing my family photos and videos:
@@ -13,10 +14,10 @@ To address these issues, I developed the `Family Media Processor` application to
 
 This Flask-based, Docker-deployable application automates setting metadata, geotagging, and media organization based on user defined settings. It works by extracting dates/times, titles, and tags directly from file names, applying them to the corresponding metadata fields to ensure consistency. Geotagging is managed through dropdowns in the user interface and a configurable config data file. And if enabled, files will also be moved in the desired directory and organized by year and month.
 
-Dashboard
+**Dashboard Screen**
 ![Dashboard Screenshot](screenshots/screenshot_1.png)
 
-Media Directory Selector
+**Media Directory Selector**
 ![Media Directory Selector](screenshots/screenshot_2.png)
 
 ## Table of Contents
@@ -122,8 +123,8 @@ To quickly set up and run the application with Docker, you can use the provided 
                 - EXTERNAL_MOVE_TO_DIR=/family-media-processor/FamilyPhotos
                 - EXCLUDED_DIRECTORIES='@eaDir'
                 - FILES_TO_DELETE=Thumbs.db,.DS_Store
-                - TZ=America/New_York
                 - ENABLE_MOVE_FILES=true
+                - TZ=America/New_York
             volumes:
                 - /family-media-processor/Uploads:/media
                 - /family-media-processor/FamilyPhotos:/moveTo
@@ -177,13 +178,17 @@ Comma-separated list of directory names that will be excluded (hidden) from the 
 - **FILES_TO_DELETE** (Optional) :  
 Comma-separated list of file names. The corresponding files will be deleted during the photo processing.
 
-- **TZ**: 
-Timezone for the container (e.g., `America/New_York`)
-Default: "GMT"
+- **ENABLE_MOVE_FILES** (Optional):  
+When enabled, users can choose whether to move processed files to a specified directory or keep them in their original location.
+Default: false
 
 - **VERBOSE_LOGGING** (Optional) : 
 Set to `true` for more detailed logs
 Default: false
+
+- **TZ**: 
+Timezone for the container (e.g., `America/New_York`)
+Default: "GMT"
 
 ### Volumes
 
