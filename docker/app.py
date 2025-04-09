@@ -17,7 +17,7 @@ media_directory = "/media"
 move_to_directory = "/moveTo"
 
 # Environment Variables
-FAMILY_LAST_NAME = os.getenv("FAMILY_LAST_NAME", "Smith")    
+FAMILY_LAST_NAME = os.getenv("FAMILY_LAST_NAME", "Cassidy")    
 APP_NAME = os.getenv("APP_NAME", f"{FAMILY_LAST_NAME} Family Media Processor")
 GEOTAG_DATA_FILE = os.getenv("GEOTAG_DATA_FILE", "./config/geotag_data.yaml")
 EXTERNAL_MEDIA_DIR = os.getenv("EXTERNAL_MEDIA_DIR", media_directory)
@@ -25,7 +25,7 @@ EXTERNAL_MOVE_TO_DIR = os.getenv("EXTERNAL_MOVE_TO_DIR", move_to_directory)
 EXCLUDED_DIRECTORIES = os.getenv("EXCLUDED_DIRECTORIES", "").split(',')
 FILES_TO_DELETE = os.getenv("FILES_TO_DELETE", "").split(',')
 TZ = os.getenv("TZ", "GMT")
-ENABLE_MOVE_FILES = os.getenv("ENABLE_MOVE_FILES", "false").lower() == "true"
+ALLOW_MOVE_FILES = os.getenv("ALLOW_MOVE_FILES", "false").lower() == "true"
 VERBOSE_LOGGING = os.getenv("VERBOSE_LOGGING", "false").lower() == "true"
 
 # Local Variables
@@ -40,7 +40,7 @@ extension_conversions = {".jpeg": ".jpg",}
 
 @app.route('/')
 def index():
-    return render_template('index.html', app_name=APP_NAME, move_to_dir=EXTERNAL_MOVE_TO_DIR, move_files_enabled=ENABLE_MOVE_FILES)
+    return render_template('index.html', app_name=APP_NAME, move_to_dir=EXTERNAL_MOVE_TO_DIR, move_files_allowed=ALLOW_MOVE_FILES)
     
 @app.route('/directory-structure', methods=['GET'])
 def directory_structure():
@@ -127,7 +127,7 @@ def process_photos_stream(data):
         file_items = [os.path.join(internal_selected_media_directory, f) for f in os.listdir(internal_selected_media_directory) if os.path.isfile(os.path.join(internal_selected_media_directory, f))]
 
     # Log user options
-    if ENABLE_MOVE_FILES:
+    if ALLOW_MOVE_FILES:
         if data['move_files_selected']:
             yield "MOVE_FILES is true. Files will be moved.\n"
         else:
@@ -397,7 +397,7 @@ def process_photos_stream(data):
 
 
     # Move files if needed
-    if ENABLE_MOVE_FILES and data['move_files_selected']:
+    if ALLOW_MOVE_FILES and data['move_files_selected']:
         yield "All files processed successfully - now moving files\n"
         file_move_operations = []
         target_file_paths = set()

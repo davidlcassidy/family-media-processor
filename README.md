@@ -123,7 +123,7 @@ To quickly set up and run the application with Docker, you can use the provided 
                 - EXTERNAL_MOVE_TO_DIR=/family-media-processor/FamilyPhotos
                 - EXCLUDED_DIRECTORIES='@eaDir'
                 - FILES_TO_DELETE=Thumbs.db,.DS_Store
-                - ENABLE_MOVE_FILES=true
+                - ALLOW_MOVE_FILES=true
                 - TZ=America/New_York
             volumes:
                 - /family-media-processor/Uploads:/media
@@ -178,8 +178,8 @@ Comma-separated list of directory names that will be excluded (hidden) from the 
 - **FILES_TO_DELETE** (Optional) :  
 Comma-separated list of file names. The corresponding files will be deleted during the photo processing.
 
-- **ENABLE_MOVE_FILES** (Optional):  
-When enabled, users can choose whether to move processed files to a specified directory or keep them in their original location.
+- **ALLOW_MOVE_FILES** (Optional):  
+When allowed, users can choose whether to move processed files to a specified directory or keep them in their original location.
 Default: false
 
 - **VERBOSE_LOGGING** (Optional) : 
