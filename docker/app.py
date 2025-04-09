@@ -17,7 +17,7 @@ media_directory = "/media"
 move_to_directory = "/moveTo"
 
 # Environment Variables
-FAMILY_LAST_NAME = os.getenv("FAMILY_LAST_NAME", "Cassidy")    
+FAMILY_LAST_NAME = os.getenv("FAMILY_LAST_NAME", "Smith")    
 APP_NAME = os.getenv("APP_NAME", f"{FAMILY_LAST_NAME} Family Media Processor")
 GEOTAG_DATA_FILE = os.getenv("GEOTAG_DATA_FILE", "./config/geotag_data.yaml")
 EXTERNAL_MEDIA_DIR = os.getenv("EXTERNAL_MEDIA_DIR", media_directory)
@@ -41,6 +41,10 @@ extension_conversions = {".jpeg": ".jpg",}
 @app.route('/')
 def index():
     return render_template('index.html', app_name=APP_NAME, move_to_dir=EXTERNAL_MOVE_TO_DIR, move_files_allowed=ALLOW_MOVE_FILES)
+    
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204  # Prevent 404 response
     
 @app.route('/directory-structure', methods=['GET'])
 def directory_structure():
