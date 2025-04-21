@@ -69,6 +69,11 @@
                 padding: 4px;
                 flex-grow: 1;
             }
+            #search-button, #start-processing-button, #cleanup-files-button {
+                padding: 10px 15px;
+                font-size: 16px;
+                color: white;
+            }
             #search-button {
                 display: flex;
                 width: 28px;
@@ -85,22 +90,24 @@
                 font-size: 16px;
                 color: white;
             }
-            #search-button:disabled {
-                background-color: #cccccc;
-                cursor: not-allowed;
-            }
             #start-processing-button {
                 background-color: #28a745;
-                color: white;
-                padding: 10px 15px;
-                font-size: 16px;
-            }
-            #start-processing-button:disabled {
-                background-color: #ccc;
-                cursor: not-allowed;
             }
             #start-processing-button:hover {
                 background-color: #218838;
+            }
+            #cleanup-files-button {
+                background-color: #fb4017;
+            }
+            #cleanup-files-button:hover {
+                background-color: #e73a14;
+            }
+            #search-button:disabled,
+            #start-processing-button:disabled,
+            #cleanup-files-button:disabled,
+            .header-button:disabled {
+                background-color: #ccc;
+                cursor: not-allowed;
             }
             select {
                 width: 100%;
@@ -161,10 +168,6 @@
             }
             .header-button:hover {
                 background-color: #0056b3;
-            }
-            .header-button:disabled {
-                background-color: #cccccc;
-                cursor: not-allowed;
             }
             #close-button {
                 background-color: #dc3545;
@@ -234,9 +237,14 @@
                 {% endif %}
                 <p>
                     <strong>Expected file naming format:</strong><br />
-                    2000-12-30T12.00.00 - Photo Title [tag1;tag2.subtag]
+                    2000-12-30T12.00.00 Photo Title [tag1;tag2.subtag]
                 </p>
-                <button id="start-processing-button" onclick="startProcessing()" style="margin-top: 10px" disabled>Start Processing</button>
+                <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+                    <button id="start-processing-button" onclick="startProcessing()" disabled>
+                        Start Processing
+                    </button>
+                    <button id="cleanup-files-button" onclick="cleanupFiles()" style="flex-shrink: 4;">Clean</button>
+                </div>
             </div>
 
             <div class="right-section">
@@ -353,7 +361,7 @@
                 document.querySelectorAll("input[type='checkbox']").forEach(checkbox => {
                     checkbox.checked = false;
                 });
-                toggleStartButton();
+                toggleButtons();
 
                 document.getElementById("search-button").disabled = true;
                 fetch('/directory-structure')
@@ -384,7 +392,7 @@
                     geotagOverride.checked = false;
                 }
 
-                toggleStartButton();
+                toggleButtons();
             });
 
             document.getElementById("country").addEventListener("change", function () {
@@ -402,7 +410,7 @@
                     stateSelect.add(option);
                 }
 
-                toggleStartButton();
+                toggleButtons();
             });
 
             document.getElementById("state").addEventListener("change", function () {
@@ -418,11 +426,11 @@
                     citySelect.add(option);
                 }
 
-                toggleStartButton();
+                toggleButtons();
             });
 
             document.getElementById("location").addEventListener("change", function () {
-                toggleStartButton();
+                toggleButtons();
             });
 
             document.getElementById("city").addEventListener("change", function () {
@@ -444,16 +452,19 @@
                     console.error("Locations not found or is not an object:", locations);
                 }
 
-                toggleStartButton();
+                toggleButtons();
             });
 
-            function toggleStartButton() {
+            function toggleButtons() {
                 const isGeotagEnabled = document.getElementById("geotag_enabled").checked;
                 const hasSelectedLocation = document.getElementById("location").value;
                 const hasSelectedMediaDirectory = document.getElementById("selected_media_directory").innerText.trim() !== '';
             
                 const startButton = document.getElementById("start-processing-button");
                 startButton.disabled = !hasSelectedMediaDirectory || (isGeotagEnabled && !hasSelectedLocation);
+                
+                const cleanButton = document.getElementById("cleanup-files-button");
+                cleanButton.disabled = !hasSelectedMediaDirectory;
             }
 
             function startProcessing() {
@@ -508,6 +519,40 @@
                 .catch((error) => {
                     console.error("Error:", error);
                     document.getElementById("logs").innerText = "Error starting media processing.";
+                });
+            }
+
+            function cleanupFiles() {
+                const payload = {
+                    recursive_search: document.getElementById("recursive_search")?.checked || false,
+                    selected_media_directory: document.getElementById("selected_media_directory").innerText.trim(),
+                };
+
+                fetch("/file-cleanup", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                })
+                .then(async (response) => {
+                    const logsElement = document.getElementById("logs");
+                    logsElement.innerHTML = "";
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let done = false;
+
+                    while (!done) {
+                        const { value, done: streamDone } = await reader.read();
+                        done = streamDone;
+                        if (value) {
+                            logsElement.innerHTML += decoder.decode(value);
+                            logsElement.scrollTop = logsElement.scrollHeight;
+                        }
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error:", error);
+                    document.getElementById("logs").innerText = "Error starting field deletion.";
                 });
             }
 
@@ -595,7 +640,7 @@
             function selectDirectory() {
                 document.getElementById('selected_media_directory').innerText = selectedDirectoryPath;
                 modal.style.display = 'none';
-                toggleStartButton();
+                toggleButtons();
             }
         </script>
     </body>

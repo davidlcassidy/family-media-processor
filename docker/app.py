@@ -22,8 +22,8 @@ APP_NAME = os.getenv("APP_NAME", f"{FAMILY_LAST_NAME} Family Media Processor")
 GEOTAG_DATA_FILE = os.getenv("GEOTAG_DATA_FILE", "./config/geotag_data.yaml")
 EXTERNAL_MEDIA_DIR = os.getenv("EXTERNAL_MEDIA_DIR", media_directory)
 EXTERNAL_MOVE_TO_DIR = os.getenv("EXTERNAL_MOVE_TO_DIR", move_to_directory)
-EXCLUDED_DIRECTORIES = os.getenv("EXCLUDED_DIRECTORIES", "").split(',')
-FILES_TO_DELETE = os.getenv("FILES_TO_DELETE", "").split(',')
+EXCLUDED_DIRECTORIES = [d.strip() for d in os.getenv("EXCLUDED_DIRECTORIES", "").split(',') if d.strip()]
+FILES_TO_DELETE = [f.strip() for f in os.getenv("FILES_TO_DELETE", "").split(',') if f.strip()]
 TZ = os.getenv("TZ", "GMT")
 ALLOW_MOVE_FILES = os.getenv("ALLOW_MOVE_FILES", "false").lower() == "true"
 VERBOSE_LOGGING = os.getenv("VERBOSE_LOGGING", "false").lower() == "true"
@@ -187,32 +187,47 @@ def process_photos_stream(data):
                 return
 
         # Use regex to extract date and title
-        match = re.match(r"^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2})\.([0-9]{2})\.([0-9]{2}) - (.+?)(?: \[(.+)\])?$", file_base_name)
+        match = re.match(
+            r"^(\d{4})-(\d{2})-(\d{2})T(\d{2})\.(\d{2})\.(\d{2})"
+            r"(?: ([^\[]*))?"
+            r"(?: \[([^\]]+)\])?$",
+            file_base_name
+        )
+
         if not match:
             yield f"File Name Format Error: {file_name}\n"
             yield f"{APP_NAME} ending early\n"
             return
         
-        year, month, day, hour, minute, second, title,tags = match.groups()
+        year, month, day, hour, minute, second, title, tags = match.groups()
         date = f"{year}:{month}:{day} {hour}:{minute}:{second}"
 
         # Validate fields
-        if re.search(r"[\[\]]", title):
-            yield f"File Name Validation Error: {file_name} title contains brackets\n"
-            yield f"{APP_NAME} ending early\n"
-            return
         if '  ' in file_name:
             yield f"File Name Validation Error: {file_name} contains consecutive spaces.\n"
+            yield f"{APP_NAME} ending early\n"
+            return
+        if title and title.startswith('-'):
+            yield f"File Name Validation Error: Title starts with a dash: {file_name}\n"
+            yield f"{APP_NAME} ending early\n"
+            return
+        if title and title.endswith(' '):
+            yield f"File Name Validation Error: Title starts with a space: {file_name}\n"
+            yield f"{APP_NAME} ending early\n"
+            return
+        if title and ('[' in title or ']' in title):
+            yield f"File Name Validation Error: Title contains brackets: {file_name}\n"
             yield f"{APP_NAME} ending early\n"
             return
 
         # Format fields
         if tags:
-            tags_list = tags.split(tag_delimiter)
+            tags_list = [tag.strip() for tag in tags.split(tag_delimiter)]
         else:
             tags = ""
             tags_list = ""
-        title = title.replace("_", "-")
+        if not title:
+           title = ""
 
         # Build ExifTool command
         exif_command = [
@@ -444,6 +459,49 @@ def process_photos_stream(data):
         
             # Move the file
             shutil.move(source_file_path, target_file_path)
+
+    yield f"{APP_NAME} completed successfully.\n"
+    
+@app.route('/file-cleanup', methods=['POST'])
+def file_cleanup():
+    data = request.get_json()
+    return Response(stream_with_context(clean_files_stream(data)), mimetype='text/plain')
+
+def clean_files_stream(data):
+	
+    # Select files based on recursion mode
+    file_items = []
+    internal_selected_media_directory = data['selected_media_directory'].replace(EXTERNAL_MEDIA_DIR, media_directory);
+    if data['recursive_search']:
+        yield "RECURSIVE_SEARCH is true. Cleaning files in all subdirectories.\n"
+        for root, _, files in os.walk(internal_selected_media_directory):
+            file_items.extend(os.path.join(root, file) for file in files)
+    else:
+        yield "RECURSIVE_SEARCH is false. Cleaning files in the top-level directory only.\n"
+        file_items = [os.path.join(internal_selected_media_directory, f) for f in os.listdir(internal_selected_media_directory) if os.path.isfile(os.path.join(internal_selected_media_directory, f))]      
+
+    yield "-------------- New Cleanup Process --------------\n"
+    
+    if not file_items:
+        yield f"No files found in: {data['selected_media_directory']}.\n"
+        yield f"{APP_NAME} ending early\n"
+        return
+
+    # Process each file
+    for i, file_path in enumerate(file_items):
+        file_name = os.path.basename(file_path)
+        file_base_name, file_extension = os.path.splitext(file_name)
+
+        # Check if file needs to be deleted
+        if file_name in FILES_TO_DELETE:
+            try:
+                os.remove(file_path)
+                yield f"File deleted: {file_path}\n"
+                continue
+            except Exception as e:
+                yield f"Error deleting {file_path}: {str(e)}\n"
+                yield f"{APP_NAME} ending early\n"
+                return
 
     yield f"{APP_NAME} completed successfully.\n"
     
