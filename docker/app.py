@@ -212,7 +212,7 @@ def process_photos_stream(data):
             yield f"{APP_NAME} ending early\n"
             return
         if title and title.endswith(' '):
-            yield f"File Name Validation Error: Title starts with a space: {file_name}\n"
+            yield f"File Name Validation Error: Title ends with a space: {file_name}\n"
             yield f"{APP_NAME} ending early\n"
             return
         if title and ('[' in title or ']' in title):
