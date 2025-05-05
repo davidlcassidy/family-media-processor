@@ -141,6 +141,8 @@ def process_photos_stream(data):
         yield f"GEOTAG_FILES is true. Files will be geotagged. (Override: {override_status})\n"
     else:
         yield "GEOTAG_FILES is false. Files will not be geotaged.\n"
+    if data['ignore_minor_errors']:
+        yield "IGNORE_MINOR_ERRORS is true. Processing files will ignore minor errors.\n"
         
         
     yield "-------------- New Process --------------\n"
@@ -212,7 +214,7 @@ def process_photos_stream(data):
             yield f"{APP_NAME} ending early\n"
             return
         if title and title.endswith(' '):
-            yield f"File Name Validation Error: Title starts with a space: {file_name}\n"
+            yield f"File Name Validation Error: Title ends with a space: {file_name}\n"
             yield f"{APP_NAME} ending early\n"
             return
         if title and ('[' in title or ']' in title):
@@ -234,7 +236,12 @@ def process_photos_stream(data):
             "exiftool", 
             "-overwrite_original",
             "-P",
-            
+            "-F",
+        ]
+        if data['ignore_minor_errors']:
+            exif_command.append("-m")
+
+        exif_command.extend([
             # Date Fields
             f"-Time:all={date} +00:00", # Use UTC universally
 
@@ -301,21 +308,27 @@ def process_photos_stream(data):
             f"-InstanceID=",
                 
             file_path
-        ]
+        ])
             
         # Tags Fields (fields must be cleared first)
-        subprocess.run([
+        exif_command_tags = [
             "exiftool",
             "-overwrite_original",
             "-P",
-                
+            "-F",
+        ]
+        if data['ignore_minor_errors']:
+            exif_command_tags.append("-m")
+
+        exif_command_tags.extend([
             "-XMP:HierarchicalSubject=", 
             "-XMP:Subject=", 
             "-IPTC:Keywords=", 
             "-Microsoft:Category=",
-                
             file_path
         ])
+        subprocess.run(exif_command_tags)
+
         if tags_list:
             for tag in tags_list:
                 tag_pipe = tag.replace(tag_hierarchy_delimiter, "|").strip()
@@ -394,7 +407,17 @@ def process_photos_stream(data):
         if result.returncode != 0:
             yield f"ExifTool processing failed for {file_name}: {result.stderr.strip()}\n"
             yield f"{APP_NAME} ending early\n"
-            return       	
+            return 
+
+        # Validate field updates (spot test) 
+        expected_exif = {
+            "Author": family_name,
+            "Copyright": copyright_notice,
+        }
+        if not validate_exif_fields(file_path, expected_exif):
+            yield f"Error updating metadata for: {file_name}\n"
+            yield f"{APP_NAME} ending early\n"
+            return
         yield f"File processed successfully: {file_name}\n"
            
         # Output all exif fields, if VERBOSE_LOGGING is true 
@@ -413,7 +436,6 @@ def process_photos_stream(data):
         except Exception as e:
             yield f"Error setting modified date for {file_name}: {str(e)}\n"
             yield f"{APP_NAME} ending early\n"
-
 
     # Move files if needed
     if ALLOW_MOVE_FILES and data['move_files_selected']:
@@ -526,6 +548,27 @@ def set_file_modified_date(file_path, date_str, timezone):
     dt_utc = dt.astimezone(ZoneInfo("UTC"))
     timestamp = dt_utc.timestamp()
     os.utime(file_path, (timestamp, timestamp))
+    
+def validate_exif_fields(file_path, expected_fields):
+    try:
+        result = subprocess.run(
+            ["exiftool", "-s"] + [f"-{key}" for key in expected_fields.keys()] + [file_path],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            return False
+
+        lines = result.stdout.splitlines()
+        actual_fields = {line.split(":")[0].strip(): ":".join(line.split(":")[1:]).strip() for line in lines}
+
+        for key, expected_value in expected_fields.items():
+            if actual_fields.get(key) != expected_value:
+                return False
+
+        return True
+    except Exception:
+        return False
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

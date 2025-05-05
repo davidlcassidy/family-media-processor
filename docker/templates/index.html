@@ -220,6 +220,10 @@
                     <input type="checkbox" id="geotag_override" name="geotag_override" disabled />
                     Override geotag data, if present
                 </label>
+                <label>
+                    <input type="checkbox" id="ignore_minor_errors" />
+                    Ignore Minor Errors (Not Recommended!!)
+                </label>
                 <p style="margin-top: 30px; margin-bottom: 2px;">
                     <strong>Media Directory:</strong>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -490,6 +494,7 @@
                     move_files_selected: document.getElementById("move_files")?.checked || false,
                     geotag_enabled: isGeotagEnabled,
                     geotag_override: document.getElementById("geotag_override")?.checked || false,
+                    ignore_minor_errors: document.getElementById("ignore_minor_errors")?.checked || false,
                     selected_media_directory: document.getElementById("selected_media_directory").innerText.trim(),
                     geotag_data: geotagDataPayload || undefined
                 };
