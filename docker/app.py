@@ -24,7 +24,6 @@ GEOTAG_DATA_FILE = os.getenv("GEOTAG_DATA_FILE", "./config/geotag_data.yaml")
 EXTERNAL_MEDIA_DIR = os.getenv("EXTERNAL_MEDIA_DIR", media_directory)
 EXTERNAL_MOVE_TO_DIR = os.getenv("EXTERNAL_MOVE_TO_DIR", move_to_directory)
 EXCLUDED_DIRECTORIES = [d.strip() for d in os.getenv("EXCLUDED_DIRECTORIES", "").split(',') if d.strip()]
-FILES_TO_DELETE = [f.strip() for f in os.getenv("FILES_TO_DELETE", "").split(',') if f.strip()]
 TZ = os.getenv("TZ", "GMT")
 ALLOW_MOVE_FILES = os.getenv("ALLOW_MOVE_FILES", "false").lower() == "true"
 VERBOSE_LOGGING = os.getenv("VERBOSE_LOGGING", "false").lower() == "true"
@@ -161,7 +160,7 @@ def process_photos_stream(data):
         file_base_name, file_extension = os.path.splitext(file_name)
         
         # Check if file needs to be deleted
-        if file_name in FILES_TO_DELETE:
+        if should_delete_file(file_name):
             try:
                 os.remove(file_path)
                 yield f"File deleted: {file_name}\n"
@@ -209,7 +208,7 @@ def process_photos_stream(data):
             yield f"File Name Format Error: {file_name}\n"
             yield f"{APP_NAME} ending early\n"
             return
-
+        
         year, month, day, hour, minute, second, title, tags = match.groups()
         date = f"{year}:{month}:{day} {hour}:{minute}:{second}"
 
@@ -456,7 +455,7 @@ def process_photos_stream(data):
         
         for source_file_path in file_items:
             file_name = os.path.basename(source_file_path)
-        
+
             year, month = file_name.split('-')[:2]
             month_name = calendar.month_abbr[int(month)].upper()
             formatted_month = f"{month} - {month_name}"
@@ -523,10 +522,9 @@ def clean_files_stream(data):
     # Process each file
     for i, file_path in enumerate(file_items):
         file_name = os.path.basename(file_path)
-        file_base_name, file_extension = os.path.splitext(file_name)
 
         # Check if file needs to be deleted
-        if file_name in FILES_TO_DELETE:
+        if should_delete_file(file_name):
             try:
                 os.remove(file_path)
                 yield f"File deleted: {file_path}\n"
@@ -538,14 +536,39 @@ def clean_files_stream(data):
 
     yield f"{APP_NAME} completed successfully.\n"
     
-def is_valid_timezone(tz):
+def should_delete_file(filename: str) -> bool:
+    FILES_TO_DELETE = {
+        "desktop.ini",
+        "thumbs.db",
+        "ehthumbs.db",
+        ".ds_store",
+        ".spotlight-v100",
+        ".trashes",
+        ".fseventsd",
+        ".directory"
+    }
+
+    PREFIXES_TO_DELETE = (
+        "._",            # Apple resource fork metadata
+        ".appledouble",  # AppleDouble metadata directory
+        ".trash-",       # Linux Trash folders (like .Trash-1000)
+    )
+
+    lower_name = filename.lower()
+    return (
+        lower_name in FILES_TO_DELETE or
+        any(lower_name.startswith(prefix) for prefix in PREFIXES_TO_DELETE)
+    )
+
+    
+def is_valid_timezone(tz: str) -> bool:
     try:
         ZoneInfo(tz)
         return True
     except ZoneInfoNotFoundError:
     	return False
     	  	
-def has_existing_gps(file_path):
+def has_existing_gps(file_path: str) -> bool:
     gps_check_result = subprocess.run(
         ["exiftool", "-GPSLongitude", "-GPSLatitude", "-n", file_path], 
         capture_output=True, 
@@ -553,14 +576,14 @@ def has_existing_gps(file_path):
     )
     return "GPS Longitude" in gps_check_result.stdout and "GPS Latitude" in gps_check_result.stdout
         
-def set_file_modified_date(file_path, date_str, timezone):
+def set_file_modified_date(file_path: str, date_str: str, timezone: str) -> None:
     dt = datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
     dt = dt.replace(tzinfo=ZoneInfo(timezone))
     dt_utc = dt.astimezone(ZoneInfo("UTC"))
     timestamp = dt_utc.timestamp()
     os.utime(file_path, (timestamp, timestamp))
     
-def validate_exif_fields(file_path, expected_fields):
+def validate_exif_fields(file_path: str, expected_fields: Dict[str, str]) -> bool:
     try:
         result = subprocess.run(
             ["exiftool", "-s"] + [f"-{key}" for key in expected_fields.keys()] + [file_path],

@@ -49,7 +49,7 @@ This Flask-based, Docker-deployable application automates setting metadata, geot
 
 Clicking the **Process Photos** button initiates the following processing logic on the media files in the `/media` directory:
 
--   **File Deletion**: Deletes files specified in `FILES_TO_DELETE` list (e.g., system-generated files).
+-   **File Deletion**: Deletes common system or metadata files that are usually unwanted in user directories (`desktop.ini`, `thumbs.db`, `.ds_store`, etc.).
 
 -   **File Extension Cleanup**: Cleans and converts file extensions for consistency (e.g., `.jpeg` to `.jpg`).
 
@@ -122,7 +122,6 @@ To quickly set up and run the application with Docker, you can use the provided 
                 - EXTERNAL_MEDIA_DIR=/family-media-processor/Uploads
                 - EXTERNAL_MOVE_TO_DIR=/family-media-processor/FamilyPhotos
                 - EXCLUDED_DIRECTORIES='@eaDir'
-                - FILES_TO_DELETE=Thumbs.db,.DS_Store
                 - ALLOW_MOVE_FILES=true
                 - TZ=America/New_York
             volumes:
@@ -174,9 +173,6 @@ External path to the mounted /moveTo directory where files can be moved after pr
 
 - **EXCLUDED_DIRECTORIES** (Optional) :  
 Comma-separated list of directory names that will be excluded (hidden) from the folder selection in the directory selector.
-
-- **FILES_TO_DELETE** (Optional) :  
-Comma-separated list of file names. The corresponding files will be deleted during the photo processing.
 
 - **ALLOW_MOVE_FILES** (Optional):  
 When allowed, users can choose whether to move processed files to a specified directory or keep them in their original location.
