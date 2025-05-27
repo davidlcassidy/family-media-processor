@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import sys
+import unicodedata
 import yaml
 from datetime import timedelta, datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -34,7 +35,7 @@ tag_hierarchy_delimiter = "."
 family_name = f"{FAMILY_LAST_NAME} Family"
 copyright_notice = f"{family_name} Photos"
 gps_coordinates_round_digits = 5  # Some software seems to struggle with longer gps coordinates
-file_extension_whitelist = ['.jpg', '.jpeg', '.mp4']
+file_extension_whitelist = ['.jpg', '.jpeg', '.mp4', '.mov']
 extension_conversions = {".jpeg": ".jpg",}
 
 
@@ -141,6 +142,8 @@ def process_photos_stream(data):
         yield f"GEOTAG_FILES is true. Files will be geotagged. (Override: {override_status})\n"
     else:
         yield "GEOTAG_FILES is false. Files will not be geotaged.\n"
+    if data['skip_file_validation']:
+        yield "SKIP_FILE_VALIDATION is true. Files will skip post-process validation.\n"
     if data['ignore_minor_errors']:
         yield "IGNORE_MINOR_ERRORS is true. Processing files will ignore minor errors.\n"
         
@@ -173,12 +176,18 @@ def process_photos_stream(data):
             yield f"Error File extension not whitelisted for {file_name}\n"
             yield f"{APP_NAME} ending early\n"
             return
-            
-        # Update file extensions if necessary (lowercase and conversions)
+
+        # Clean file names, if necessary
+        # 1. Update file extensions if necessary (lowercase and conversions)
+        # 2. Replace weird Unicode spaces (Zs category) with regular space
         new_extension = extension_conversions.get(file_extension.lower(), file_extension.lower())
-        if file_extension != new_extension:
-            new_file_name = f"{file_base_name}{new_extension}"
-            new_file_path = os.path.join(os.path.dirname(file_path), f"{file_base_name}{new_extension}")
+        normalized_base = ''.join(
+            ' ' if unicodedata.category(c) == 'Zs' and c != ' ' else c
+            for c in file_base_name
+        )
+        new_file_name = f"{normalized_base}{new_extension}"
+        new_file_path = os.path.join(os.path.dirname(file_path), new_file_name)
+        if new_file_name != file_name:
             try:
                 os.rename(file_path, new_file_path)
                 file_path = new_file_path
@@ -200,7 +209,7 @@ def process_photos_stream(data):
             yield f"File Name Format Error: {file_name}\n"
             yield f"{APP_NAME} ending early\n"
             return
-        
+
         year, month, day, hour, minute, second, title, tags = match.groups()
         date = f"{year}:{month}:{day} {hour}:{minute}:{second}"
 
@@ -409,17 +418,19 @@ def process_photos_stream(data):
             yield f"{APP_NAME} ending early\n"
             return 
 
-        # Validate field updates (spot test) 
-        expected_exif = {
-            "Author": family_name,
-            "Copyright": copyright_notice,
-        }
-        if not validate_exif_fields(file_path, expected_exif):
-            yield f"Error updating metadata for: {file_name}\n"
-            yield f"{APP_NAME} ending early\n"
-            return
+        # Validate field updates (spot test)
+        if not data['skip_file_validation']:
+            expected_exif = {
+                "Author": family_name,
+                "Copyright": copyright_notice,
+            }
+            if not validate_exif_fields(file_path, expected_exif):
+                yield f"Error updating metadata for: {file_name}\n"
+                yield f"{APP_NAME} ending early\n"
+                return
+
         yield f"File processed successfully: {file_name}\n"
-           
+
         # Output all exif fields, if VERBOSE_LOGGING is true 
         if VERBOSE_LOGGING:
             metadata_result = subprocess.run(["exiftool", file_path], capture_output=True, text=True)
@@ -429,7 +440,7 @@ def process_photos_stream(data):
             else:
                 yield f"Error fetching metadata for {file_name}: {metadata_result.stderr.strip()}\n"
                 return
-        
+
         # Update file modified date   
         try:
             set_file_modified_date(file_path, date, TZ)
