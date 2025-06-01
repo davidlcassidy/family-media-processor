@@ -1,0 +1,11 @@
+pet.*
+photoshoot.baby
+photoshoot.family
+photoshoot.school
+holiday.birthday.*
+holiday.christmas
+hoiday.easter
+holiday.halloween
+holiday.independence day
+holiday.thanksgiving
+holiday.valentines day

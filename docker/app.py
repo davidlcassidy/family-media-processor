@@ -18,9 +18,10 @@ media_directory = "/media"
 move_to_directory = "/moveTo"
 
 # Environment Variables
-FAMILY_LAST_NAME = os.getenv("FAMILY_LAST_NAME", "Smith")    
+FAMILY_LAST_NAME = os.getenv("FAMILY_LAST_NAME", "Cassidy")    
 APP_NAME = os.getenv("APP_NAME", f"{FAMILY_LAST_NAME} Family Media Processor")
 GEOTAG_DATA_FILE = os.getenv("GEOTAG_DATA_FILE", "./config/geotag_data.yaml")
+TAG_WHITELIST_FILE = os.getenv("TAG_WHITELIST_FILE", "")
 EXTERNAL_MEDIA_DIR = os.getenv("EXTERNAL_MEDIA_DIR", media_directory)
 EXTERNAL_MOVE_TO_DIR = os.getenv("EXTERNAL_MOVE_TO_DIR", move_to_directory)
 EXCLUDED_DIRECTORIES = [d.strip() for d in os.getenv("EXCLUDED_DIRECTORIES", "").split(',') if d.strip()]
@@ -87,6 +88,11 @@ def geotag_data():
 @app.route('/start-processing', methods=['POST'])
 def start_processing():
     data = request.get_json()
+    
+    try:
+        data['tag_whitelist_patterns'] = load_tag_whitelist()
+    except Exception as e:
+        return "Error: Invalid tag whitelist file.", 500
 
     if data['geotag_enabled']:
         try:
@@ -94,7 +100,7 @@ def start_processing():
             latitude = round(latitude, gps_coordinates_round_digits)
             longitude = round(longitude, gps_coordinates_round_digits)
         except ValueError:
-            return "Error: Invalid coordinates format. Ensure they are number pairs.", 400
+            return "Error: Invalid coordinates format. Ensure they are number pairs.", 500
 
         country, country_code = data['geotag_data']['country'].split(' - ', 1)
 
@@ -208,9 +214,18 @@ def process_photos_stream(data):
             yield f"File Name Format Error: {file_name}\n"
             yield f"{APP_NAME} ending early\n"
             return
-        
+
         year, month, day, hour, minute, second, title, tags = match.groups()
         date = f"{year}:{month}:{day} {hour}:{minute}:{second}"
+        
+        # Format fields
+        if tags:
+            tags_list = [tag.strip() for tag in tags.split(tag_delimiter)]
+        else:
+            tags = ""
+            tags_list = ""
+        if not title:
+           title = ""
 
         # Validate fields
         if '  ' in file_name:
@@ -229,15 +244,12 @@ def process_photos_stream(data):
             yield f"File Name Validation Error: Title contains brackets: {file_name}\n"
             yield f"{APP_NAME} ending early\n"
             return
-
-        # Format fields
-        if tags:
-            tags_list = [tag.strip() for tag in tags.split(tag_delimiter)]
-        else:
-            tags = ""
-            tags_list = ""
-        if not title:
-           title = ""
+        if tags_list and data['tag_whitelist_patterns']:
+            for tag in tags_list:
+                if not any(pattern.match(tag) for pattern in data['tag_whitelist_patterns']):
+                    yield f"File Name Validation Error: '{tag}' tag is not allowed.\n"
+                    yield f"{APP_NAME} ending early\n"
+                    return
 
         # Build ExifTool command
         exif_command = [
@@ -455,7 +467,7 @@ def process_photos_stream(data):
         
         for source_file_path in file_items:
             file_name = os.path.basename(source_file_path)
-
+        
             year, month = file_name.split('-')[:2]
             month_name = calendar.month_abbr[int(month)].upper()
             formatted_month = f"{month} - {month_name}"
@@ -536,6 +548,32 @@ def clean_files_stream(data):
 
     yield f"{APP_NAME} completed successfully.\n"
     
+def load_tag_whitelist():
+    patterns = []
+    if not TAG_WHITELIST_FILE:
+    	return None
+    try:
+        with open(TAG_WHITELIST_FILE, 'r', encoding='utf-8') as f:
+            for line in f:
+                tag = line.strip()
+                if not tag or tag.startswith('#'):
+                    continue
+                segments_with_wildcards = [
+                    '[^.]+'
+                    if segment == '*'
+                    else re.escape(segment)
+                    for segment in tag.split('.')
+                ]
+                regex = '^' + r'\.'.join(segments_with_wildcards) + '$'
+                patterns.append(re.compile(regex, re.IGNORECASE))
+    except Exception as e:
+        raise RuntimeError(f"Failed to load tag whitelist file.")
+
+    if not patterns:
+        raise ValueError("Tag whitelist file is empty or contains no valid tags.")
+
+    return patterns
+    
 def should_delete_file(filename: str) -> bool:
     FILES_TO_DELETE = {
         "desktop.ini",
@@ -560,7 +598,6 @@ def should_delete_file(filename: str) -> bool:
         any(lower_name.startswith(prefix) for prefix in PREFIXES_TO_DELETE)
     )
 
-    
 def is_valid_timezone(tz: str) -> bool:
     try:
         ZoneInfo(tz)
@@ -583,7 +620,7 @@ def set_file_modified_date(file_path: str, date_str: str, timezone: str) -> None
     timestamp = dt_utc.timestamp()
     os.utime(file_path, (timestamp, timestamp))
     
-def validate_exif_fields(file_path: str, expected_fields: Dict[str, str]) -> bool:
+def validate_exif_fields(file_path, expected_fields):
     try:
         result = subprocess.run(
             ["exiftool", "-s"] + [f"-{key}" for key in expected_fields.keys()] + [file_path],

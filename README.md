@@ -1,6 +1,4 @@
 
-
-
 # Family Media Processor
 
 I was facing multiple challenges with organizing my family photos and videos:
@@ -30,7 +28,8 @@ This Flask-based, Docker-deployable application automates setting metadata, geot
 - [Configuration](#configuration)
   - [Environment Variables](#environment-variables)
   - [Volumes](#volumes)
-  - [Geotag Data File](#geotag-data-file)
+  - [Config File: Geotag Data](#config-file-geotag-data)
+  - [Config File: Tag Whitelist](#config-file-tag-whitelist)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
@@ -38,7 +37,8 @@ This Flask-based, Docker-deployable application automates setting metadata, geot
 
 - `docker/app.py`: The main Python application handling the backend, including geotag data retrieval and file processing logic.
 - `docker/templates/index.html`: The HTML file for the web interface.
-- `config/sample_geotag_data.yaml`: Config YAML file with geotagging data.
+- `config/sample_geotag_data.yaml`: Sample geotagging data config file.
+- - `config/sample_tag_whitelist.yaml`: Sample tag whitelist config file.
 - `screenshots/`: Directory containing project screenshots.
 - `Dockerfile`: The Docker configuration to build and run the application.
 - `README.md`: Documentation for the project.
@@ -79,7 +79,7 @@ Clicking the **Process Photos** button initiates the following processing logic 
 Enabling recursive search will process media files within the `/media` directory and all sub-directories as well. If disabled, sub-directories will be ignored.
 
 - **Move Files**
-If enabled, files will be moved them into the `/moveTo` directory and organized by year and month. Otherwise, the field will be processed, but remained in the `/media` directory.
+If enabled, files will be moved them into the `/moveTo` directory and organized by year and month. Otherwise, the field will be processed, but will stay in the `/media` directory.
 
 - **Geotagging**
 When a user enables geotagging in the user interface, the geotagging section on the right allows the user to select a location for the files being processed. The application retrieves the available geotag options dynamically based on the geotag data config. 
@@ -119,6 +119,7 @@ To quickly set up and run the application with Docker, you can use the provided 
                 - APP_NAME=Smith Family Media Processor
                 - FAMILY_LAST_NAME=Smith
                 - GEOTAG_DATA_FILE=/config/geotag_data.yaml
+                - TAG_WHITELIST_FILE=/config/tag_whitelist.txt
                 - EXTERNAL_MEDIA_DIR=/family-media-processor/Uploads
                 - EXTERNAL_MOVE_TO_DIR=/family-media-processor/FamilyPhotos
                 - EXCLUDED_DIRECTORIES='@eaDir'
@@ -165,6 +166,9 @@ Default: "Smith"
 Path to the geotagging data file
 Default: "./config/geotag_data.yaml"
 
+- **TAG_WHITELIST_FILE** (Optional) : 
+Path to the tag whitelist file. All tags will be allowed if no file path is provided.
+
 - **EXTERNAL_MEDIA_DIR** (Optional, but recommended) : 
 External path to the mounted /media directory containing files to process.
 
@@ -199,9 +203,9 @@ If file moving is enabled, processed files are moved to this directory and organ
 - **Config Directory (`/config`)**  
 Stores configuration files, such as the geotagging data file (`geotag_data.yaml`).
 
-### Geotag Data File
+### Config File: Geotag Data
 
-A geotaging data config file is required for the geotaging feature. This config file is expected in the following format.
+A geotagging data config file is required for the geotagging feature. This config file is expected in the following format.
 
 ```yaml
 Country Name - Country Code:
@@ -212,6 +216,10 @@ Country Name - Country Code:
 
 A sample config file is included in the project.
 Note: Country codes should be in [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2#Officially_assigned_code_elements) format
+
+### Config File: Tag Whitelist
+
+This file allows the user to define a whitelist of allowed tags using dot-separated values. You can use `*` as a wildcard to match any single segment (e.g. `holiday.*`). Tags are checked against this list to determine if they are allowed.
 
 ## Troubleshooting
 
