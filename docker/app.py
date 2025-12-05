@@ -19,7 +19,7 @@ media_directory = "/media"
 move_to_directory = "/moveTo"
 
 # Environment Variables
-FAMILY_LAST_NAME = os.getenv("FAMILY_LAST_NAME", "Cassidy")    
+FAMILY_LAST_NAME = os.getenv("FAMILY_LAST_NAME", "Smith")    
 APP_NAME = os.getenv("APP_NAME", f"{FAMILY_LAST_NAME} Family Media Processor")
 GEOTAG_DATA_FILE = os.getenv("GEOTAG_DATA_FILE", "./config/geotag_data.yaml")
 TAG_WHITELIST_FILE = os.getenv("TAG_WHITELIST_FILE", "")
@@ -38,6 +38,7 @@ copyright_notice = f"{family_name} Photos"
 gps_coordinates_round_digits = 5  # Some software seems to struggle with longer gps coordinates
 file_extension_whitelist = ['.jpg', '.jpeg', '.mp4', '.mov']
 extension_conversions = {".jpeg": ".jpg",}
+gps_empty_field_value = "----"
 
 
 @app.route('/')
@@ -55,14 +56,14 @@ def directory_structure():
         directory_name = os.path.basename(root_path)
         if directory_name in EXCLUDED_DIRECTORIES:
             return None
-            
+
         tree = {
             'name': directory_name,
             'internal_path': root_path,
             'external_path': root_path.replace(media_directory, EXTERNAL_MEDIA_DIR, 1),
             'subdirectories': []
         }
-        
+
         try:
             for entry in os.scandir(root_path):
                 if entry.is_dir():
@@ -80,11 +81,24 @@ def directory_structure():
     
 @app.route('/geotag-data', methods=['GET'])
 def geotag_data():
+
+    geotag_data = {}
     try:
         with open(GEOTAG_DATA_FILE, 'r', encoding='utf-8') as file:
-            return jsonify(yaml.safe_load(file))
+            geotag_data = yaml.safe_load(file)
     except Exception as e:
         return jsonify({"error": f"Error loading geotag data: {str(e)}"}), 500
+
+    # Add gps empty field values
+    geotag_data[gps_empty_field_value] = {
+        gps_empty_field_value: {
+            gps_empty_field_value: {
+                gps_empty_field_value: ""
+            }
+        }
+    }
+
+    return jsonify(geotag_data)
 
 @app.route('/start-processing', methods=['POST'])
 def start_processing():
@@ -96,24 +110,36 @@ def start_processing():
         return "Error: Invalid tag whitelist file.", 500
 
     if data['geotag_enabled']:
-        try:
-            latitude, longitude = map(float, data['geotag_data']['coordinates'].split(','))
-            latitude = round(latitude, gps_coordinates_round_digits)
-            longitude = round(longitude, gps_coordinates_round_digits)
-        except ValueError:
-            return "Error: Invalid coordinates format. Ensure they are number pairs.", 500
+    	
+        user_selected_fields = [
+            data['geotag_data']['location'],
+            data['geotag_data']['city'],
+            data['geotag_data']['state']
+        ]
+        if all(field == gps_empty_field_value for field in user_selected_fields):
+            data['geotag_delete'] = True
+            data['geotag_data'] = {}
 
-        country, country_code = data['geotag_data']['country'].split(' - ', 1)
-
-        data['geotag_data'] = {
-            "location": data['geotag_data']['location'],
-            "city": data['geotag_data']['city'],
-            "state": data['geotag_data']['state'],
-            "country": country,
-            "country_code": country_code,
-            "longitude": longitude,
-            "latitude": latitude,
-        }
+        else: 
+            try:
+                latitude, longitude = map(float, data['geotag_data']['coordinates'].split(','))
+                latitude = round(latitude, gps_coordinates_round_digits)
+                longitude = round(longitude, gps_coordinates_round_digits)
+            except ValueError:
+                return "Error: Invalid coordinates format. Ensure they are number pairs.", 500
+	
+            country, country_code = data['geotag_data']['country'].split(' - ', 1)
+	
+            data['geotag_delete'] = False
+            data['geotag_data'] = {
+                "location": data['geotag_data']['location'],
+                "city": data['geotag_data']['city'],
+                "state": data['geotag_data']['state'],
+                "country": country,
+                "country_code": country_code,
+                "longitude": longitude,
+                "latitude": latitude,
+            }
 
     return Response(stream_with_context(process_photos_stream(data)), mimetype='text/plain')
 
@@ -145,15 +171,18 @@ def process_photos_stream(data):
             yield "MOVE_FILES is false. Files will not be moved.\n"
     if data['geotag_enabled']:
         override_status = "enabled" if data['geotag_override'] else "disabled"
-        yield f"GEOTAG_FILES is true. Files will be geotagged. (Override: {override_status})\n"
+        if data['geotag_delete']:
+            yield f"GEOTAG_FILES is true and GEOTAG_DELETE is selected. Files will be purged of geotag data.\n"
+        else:
+            yield f"GEOTAG_FILES is true. Files will be geotagged. (Override: {override_status})\n"
     else:
         yield "GEOTAG_FILES is false. Files will not be geotaged.\n"
     if data['skip_file_validation']:
         yield "SKIP_FILE_VALIDATION is true. Files will skip post-process validation.\n"
     if data['ignore_minor_errors']:
         yield "IGNORE_MINOR_ERRORS is true. Processing files will ignore minor errors.\n"
-        
-        
+
+
     yield "-------------- New Process --------------\n"
     
     if not file_items:
@@ -218,7 +247,7 @@ def process_photos_stream(data):
 
         year, month, day, hour, minute, second, title, tags = match.groups()
         date = f"{year}:{month}:{day} {hour}:{minute}:{second}"
-        
+
         # Format fields
         if tags:
             tags_list = [tag.strip() for tag in tags.split(tag_delimiter)]
@@ -311,10 +340,10 @@ def process_photos_stream(data):
             f"-XMP-iptcCore:CreatorWorkEmail=",
             f"-XMP-iptcCore:CreatorWorkTelephone=",
             f"-XMP-iptcCore:CreatorWorkURL=",
-               
+
             f"-XMP-photoshop:TextLayerName=",
             f"-XMP-photoshop:TextLayerText=",
-                
+
             f"-DerivedFromDocumentID=",
             f"-DerivedFromOriginalDocumentID=",
             f"-OriginalDocumentID=",
@@ -327,10 +356,10 @@ def process_photos_stream(data):
             f"-HistorySoftwareAgent=",
             f"-HistoryWhen=",
             f"-InstanceID=",
-                
+
             file_path
         ])
-            
+  
         # Tags Fields (fields must be cleared first)
         exif_command_tags = [
             "exiftool",
@@ -361,22 +390,69 @@ def process_photos_stream(data):
                     f"-IPTC:Keywords+={tag_slash}",
                     f"-Microsoft:Category+={tag_slash}"
                 ])
-                
-                
-        # Geotag Fields
-        if data['geotag_enabled']:
+  
+        # Delete Geotag Fields
+        if data['geotag_delete']:
+        	exif_command.extend([
+                f"-composite:gpslatitude=",
+                f"-xmp:gpslatitude=",
+                f"-composite:gpslongitude=",
+                f"-xmp:gpslongitude=",
+                f"-GPSAltitude=",
+                f"-GPSAltitudeRef=",
+
+                f"-Keys:GPSCoordinates=",
+                f"-Userdata:GPSCoordinates=",
+                f"-Itemlist:GPSCoordinates=",
+
+                f"-XMP:City=",
+                f"-XMP:State=",
+                f"-XMP:CountryCode=",
+                f"-XMP:Country=",
+                f"-XMP:CountryName=",
+
+                f"-IPTC:City=",
+                f"-IPTC:Province-State=",
+                f"-IPTC:Country-PrimaryLocationCode=",
+                f"-IPTC:Country-PrimaryLocationName=",
+
+                f"-XMP-photoshop:City=",
+                f"-XMP-photoshop:State=",
+                f"-XMP-photoshop:Country=",
+
+                f"-XMP-iptcExt:LocationShownCity=",
+                f"-XMP-iptcExt:LocationShownProvinceState=",
+                f"-XMP-iptcExt:LocationShownCountryCode=",
+                f"-XMP-iptcExt:LocationShownCountryName=",
+                f"-XMP-iptcExt:LocationShownGPSLatitude=",
+                f"-XMP-iptcExt:LocationShownGPSLongitude=",
+                f"-XMP-iptcExt:LocationShownGPSAltitude=",
+                f"-XMP-iptcExt:LocationShownGPSAltitudeRef=",
+                f"-XMP-iptcExt:LocationShownLocationName=",
+
+                f"-Keys:LocationName=",
+
+                f"-GPSMapDatum=",
+                f"-GPSImgDirection=",
+                f"-GPSImgDirectionRef=",
+                f"-GPSSpeed=",
+                f"-GPSSpeedRef=",
+            ])
+
+        # Add Geotag Fields
+        elif data['geotag_enabled']:
             existing_gps = has_existing_gps(file_path)
-                
+
             if existing_gps and not data['geotag_override']:
                 yield f"   Warning: Geotag data already exists for: {file_name}\n"
 
             elif not existing_gps or data['geotag_override']:
                 if existing_gps and data['geotag_override']:
                     yield f"   Warning: Overriding existing geotag data for: {file_name}\n"
-                    
+  
                 tri_coordinates = f"{data['geotag_data']['latitude']}, {data['geotag_data']['longitude']}, 0"
                 location_string = f"{data['geotag_data']['city']}, {data['geotag_data']['state']}, {data['geotag_data']['country']}"
-                      
+
                 exif_command.extend([
                     f"-composite:gpslatitude={data['geotag_data']['latitude']}",
                     f"-xmp:gpslatitude={data['geotag_data']['latitude']}",
@@ -384,26 +460,26 @@ def process_photos_stream(data):
                     f"-xmp:gpslongitude={data['geotag_data']['longitude']}",
                     f"-GPSAltitude=0",
                     f"-GPSAltitudeRef=0",
-                        
+
                     f"-Keys:GPSCoordinates={tri_coordinates}",
                     f"-Userdata:GPSCoordinates={tri_coordinates}",
                     f"-Itemlist:GPSCoordinates={tri_coordinates}",
-                        
+
                     f"-XMP:City={data['geotag_data']['city']}",
                     f"-XMP:State={data['geotag_data']['state']}",
                     f"-XMP:CountryCode={data['geotag_data']['country_code']}",
                     f"-XMP:Country={data['geotag_data']['country']}",
                     f"-XMP:CountryName={data['geotag_data']['country']}",
-                       
+
                     f"-IPTC:City={data['geotag_data']['city']}",
                     f"-IPTC:Province-State={data['geotag_data']['state']}",
                     f"-IPTC:Country-PrimaryLocationCode={data['geotag_data']['country_code']}",
                     f"-IPTC:Country-PrimaryLocationName={data['geotag_data']['country']}",
-                        
+
                     f"-XMP-photoshop:City={data['geotag_data']['city']}",
                     f"-XMP-photoshop:State={data['geotag_data']['state']}",
                     f"-XMP-photoshop:Country={data['geotag_data']['country']}",
-                        
+
                     f"-XMP-iptcExt:LocationShownCity={data['geotag_data']['city']}",
                     f"-XMP-iptcExt:LocationShownProvinceState={data['geotag_data']['state']}",
                     f"-XMP-iptcExt:LocationShownCountryCode={data['geotag_data']['country_code']}",
@@ -413,9 +489,9 @@ def process_photos_stream(data):
                     f"-XMP-iptcExt:LocationShownGPSAltitude=0",
                     f"-XMP-iptcExt:LocationShownGPSAltitudeRef=0",
                     f"-XMP-iptcExt:LocationShownLocationName={location_string}",
-                        
+
                     f"-Keys:LocationName={location_string}",
-                      
+
                     f"-GPSMapDatum=",
                     f"-GPSImgDirection=",
                     f"-GPSImgDirectionRef=",
@@ -465,30 +541,30 @@ def process_photos_stream(data):
         yield "All files processed successfully - now moving files\n"
         file_move_operations = []
         target_file_paths = set()
-        
+
         for source_file_path in file_items:
             file_name = os.path.basename(source_file_path)
-        
+
             year, month = file_name.split('-')[:2]
             month_name = calendar.month_abbr[int(month)].upper()
             formatted_month = f"{month} - {month_name}"
             target_directory = os.path.join(move_to_directory, year, formatted_month)
             target_file_path = os.path.join(target_directory, file_name)
-            
+
             external_target_file_path = target_file_path.replace(move_to_directory, EXTERNAL_MOVE_TO_DIR)
-            
+
             if target_file_path in target_file_paths:
                 yield f"Conflict found: Multiple files have the same target path {external_target_file_path}\n"
                 yield "No files will be moved.\n"
                 yield f"{APP_NAME} ending early\n"
                 return
-        
+
             if os.path.exists(target_file_path):
                 yield f"Conflict found: {external_target_file_path} already exists.\n"
                 yield f"No files will be moved.\n"
                 yield f"{APP_NAME} ending early\n"
                 return
-        
+
             target_file_paths.add(target_file_path)
             file_move_operations.append({
                 "source_path": source_file_path,
@@ -498,10 +574,10 @@ def process_photos_stream(data):
         for operation in file_move_operations:
             source_file_path = operation["source_path"]
             target_file_path = operation["target_path"]
-        
+
             # Create the target directory if it doesn't exist
             os.makedirs(os.path.dirname(target_file_path), exist_ok=True)
-        
+
             # Move the file
             shutil.move(source_file_path, target_file_path)
 
@@ -577,6 +653,7 @@ def load_tag_whitelist():
     
 def should_delete_file(filename: str) -> bool:
     FILES_TO_DELETE = {
+    	"thumbs.db@synoeastream",
         "desktop.ini",
         "thumbs.db",
         "ehthumbs.db",
